@@ -10,11 +10,11 @@ namespace EIJ.WorldMap
         [Serializable]
         internal class AreaInfo
         {
-            [SerializeField] private MapArea m_MapArea;
-            public MapArea MapArea { get { return m_MapArea; } }
+            [SerializeField] private WorldMapArea m_MapArea;
+            public WorldMapArea MapArea { get { return m_MapArea; } }
 
 
-            public AreaInfo(MapArea mapArea)
+            public AreaInfo(WorldMapArea mapArea)
             {
                 m_MapArea = mapArea;
             }
