@@ -136,11 +136,11 @@ namespace EIJ.BattleMap
             public static Color[] holderCellColors = new Color[]{
                 new Color32(55, 65, 55, 255),
                 new Color32(65, 55, 55, 255),
-                new Color32(180, 160, 90, 255)};
+                new Color32(230, 190, 90, 255)};
             public static Color[] varientsCellColors = new Color[]{
                 new Color32(0, 0, 0, 0),
                 new Color32(50, 155, 155, 255),
-                new Color32(150, 80, 30, 255),
+                new Color32(170, 170, 180, 255),
                 new Color32(30, 230, 30, 255),
                 new Color32(200, 30, 30, 255)};
 
