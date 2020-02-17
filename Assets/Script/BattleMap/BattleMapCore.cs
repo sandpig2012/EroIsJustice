@@ -12,11 +12,11 @@ namespace EIJ.BattleMap {
     #region [ Battle Map Cell ]
     public enum BattleMapCellType
     {
-        Block,
-        Path,
-        Platform,
-        Home,
-        Spawn,
+        Block = 0,
+        Path = 1,
+        Platform = 2,
+        Home = 3,
+        Spawn = 4,
     }
 
     public enum AreaMirror
@@ -145,17 +145,11 @@ namespace EIJ.BattleMap {
     ////    Path Find   ////
     ////////////////////////
     #region [ Path ]
-
+    [Serializable]
     public class BattleMapPath
     {
-        //start from Spawn-type cell, end to Home-type cell
-        //[spawn, step 1, step2, step3, ... , step40, home]
-        public BattleMapCell[] path { get; private set; }
-
-        public void SetPath(BattleMapCell[] path)
-        {
-            this.path = path;
-        }
+        //area local location
+        public List<Int2> m_PathLocations = new List<Int2>();
     }
     #endregion
 }

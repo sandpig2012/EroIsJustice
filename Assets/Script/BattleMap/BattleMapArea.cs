@@ -15,7 +15,206 @@ namespace EIJ.BattleMap
     [Serializable]
     public class BattleMapAreaVariant
     {
-        public List<BattleMapCell> cells = new List<BattleMapCell>();
+        [SerializeField] private List<Int2> m_CellLocations = new List<Int2>();
+        [SerializeField] private List<BattleMapCellType> m_CellTypes = new List<BattleMapCellType>();
+
+        //compiled data
+        [SerializeField] private int m_EntryCount = 0;
+        public int entryCount { get { return m_EntryCount; } }
+        [SerializeField] private BattleMapPath[,] m_Paths = null;
+        public BattleMapPath[,] paths { get { return m_Paths; } }
+        [SerializeField] private float[] m_RateSplitPoints = null;
+        public float[] rateSplitPoints { get { return m_RateSplitPoints; } }
+
+#if UNITY_EDITOR
+        [SerializeField] private float m_AppearRate = 1.0f;
+        public float appearRate { get { return m_AppearRate; } set { m_AppearRate = Mathf.Clamp(value, 0.1f, 100.0f); } }
+        [SerializeField] private bool m_Compiled = false;
+        public bool compiled { get { return m_Compiled; } }
+
+        /////////////////////
+        ////    Paint    ////
+        /////////////////////
+        #region [ Paint ]
+        public void AddHome(Int2 location)
+        {
+            int homeIndex = m_CellTypes.IndexOf(BattleMapCellType.Home);
+            if(homeIndex >= 0)
+            {
+                m_CellLocations.RemoveAt(homeIndex);
+                m_CellTypes.RemoveAt(homeIndex);
+            }
+            int index = m_CellLocations.IndexOf(location);
+            if(index >= 0)
+            {
+                m_CellTypes[index] = BattleMapCellType.Home;
+            }
+            else
+            {
+                m_CellLocations.Add(location);
+                m_CellTypes.Add(BattleMapCellType.Home);
+            }
+        }
+        public void AddSpawn(Int2 location)
+        {
+            int spawnIndex = m_CellTypes.IndexOf(BattleMapCellType.Spawn);
+            if (spawnIndex >= 0)
+            {
+                m_CellLocations.RemoveAt(spawnIndex);
+                m_CellTypes.RemoveAt(spawnIndex);
+            }
+            int index = m_CellLocations.IndexOf(location);
+            if (index >= 0)
+            {
+                m_CellTypes[index] = BattleMapCellType.Spawn;
+            }
+            else
+            {
+                m_CellLocations.Add(location);
+                m_CellTypes.Add(BattleMapCellType.Spawn);
+            }
+        }
+        public void AddPath(Int2 location)
+        {
+            int index = m_CellLocations.IndexOf(location);
+            if (index >= 0) m_CellTypes[index] = BattleMapCellType.Path;
+            else
+            {
+                m_CellLocations.Add(location);
+                m_CellTypes.Add(BattleMapCellType.Path);
+            }
+        }
+        public void AddPlatform(Int2 location)
+        {
+            int index = m_CellLocations.IndexOf(location);
+            if (index >= 0) m_CellTypes[index] = BattleMapCellType.Platform;
+            else
+            {
+                m_CellLocations.Add(location);
+                m_CellTypes.Add(BattleMapCellType.Platform);
+            }
+        }
+        public void RemoveCell(Int2 location)
+        {
+            int index = m_CellLocations.IndexOf(location);
+            if(index >= 0)
+            {
+                m_CellLocations.RemoveAt(index);
+                m_CellTypes.RemoveAt(index);
+            }
+        }
+        public bool GetInfo(out int cellCount, out Int2[] locations, out BattleMapCellType[] types)
+        {
+            cellCount = m_CellLocations.Count;
+            locations = new Int2[cellCount];
+            types = new BattleMapCellType[cellCount];
+            if (cellCount <= 0) return false;
+            for(int i = 0; i < cellCount; i++)
+            {
+                locations[i] = m_CellLocations[i];
+                types[i] = m_CellTypes[i];
+            }
+            return true;
+        }
+        #endregion
+        ///////////////////////
+        ////    Compile    ////
+        ///////////////////////
+        #region [ Compile ]
+        public void Compile() 
+        {
+            m_Compiled = true;
+        }
+        public void Decompile()
+        {
+            m_Compiled = false;
+        }
+        #endregion
+        //////////////////////
+        ////    Helper    ////
+        //////////////////////
+        #region [ Helper ]
+        public void Clear()
+        {
+            m_CellLocations.Clear();
+            m_CellTypes.Clear();
+        }
+        public void SetLocationAndType(List<Int2> locations, List<BattleMapCellType> types)
+        {
+            Clear();
+            foreach (var location in locations) m_CellLocations.Add(location);
+            foreach (var type in types) m_CellTypes.Add(type);
+        }
+        public BattleMapAreaVariant CreateCopy()
+        {
+            BattleMapAreaVariant copy = new BattleMapAreaVariant();
+            copy.SetLocationAndType(m_CellLocations, m_CellTypes);
+            copy.appearRate = m_AppearRate;
+            return copy;
+        }
+        public void MatchNewTemplate(BattleMapAreaType mapType, ref List<Int2> cellHolderLocations, ref List<VariantCellHolderType> cellHolderTypes)
+        {
+            int count = m_CellLocations.Count;
+            Int2 currentLocation;
+            int currentIndex;
+            BattleMapCellType currentCellType;
+            VariantCellHolderType currentHolderType;
+            for (int i = 0; i < count; i++)
+            {
+                currentLocation = m_CellLocations[i];
+                currentIndex = cellHolderLocations.IndexOf(currentLocation);
+                if(currentIndex < 0)
+                {
+                    m_CellLocations.RemoveAt(i);
+                    m_CellTypes.RemoveAt(i);
+                    count--;
+                    i--;
+                    continue;
+                }
+                else
+                {
+                    currentHolderType = cellHolderTypes[currentIndex];
+                    currentCellType = m_CellTypes[i];
+                    if (currentHolderType == VariantCellHolderType.Entry)
+                    {
+                        m_CellLocations.RemoveAt(i);
+                        m_CellTypes.RemoveAt(i);
+                        count--;
+                        i--;
+                        continue;
+                    }
+                    else if (currentHolderType == VariantCellHolderType.Wall)
+                    {
+                        if(currentCellType != BattleMapCellType.Platform)
+                        {
+                            m_CellLocations.RemoveAt(i);
+                            m_CellTypes.RemoveAt(i);
+                            count--;
+                            i--;
+                            continue;
+                        }
+                    }
+                    if(currentCellType == BattleMapCellType.Home && mapType != BattleMapAreaType.Home)
+                    {
+                        m_CellLocations.RemoveAt(i);
+                        m_CellTypes.RemoveAt(i);
+                        count--;
+                        i--;
+                        continue;
+                    }
+                    if(currentCellType == BattleMapCellType.Spawn && mapType != BattleMapAreaType.Spawn)
+                    {
+                        m_CellLocations.RemoveAt(i);
+                        m_CellTypes.RemoveAt(i);
+                        count--;
+                        i--;
+                        continue;
+                    }
+                }
+            }
+        }
+        #endregion
+#endif
     }
 
 #if UNITY_EDITOR
@@ -57,7 +256,7 @@ namespace EIJ.BattleMap
         [SerializeField] private BattleMapAreaEditorProcessStep m_Step = BattleMapAreaEditorProcessStep.Template;
         public bool processCompleted { get { return m_Step == BattleMapAreaEditorProcessStep.Completed; } }
         public bool processTemplate { get { return m_Step == BattleMapAreaEditorProcessStep.Template; } }
-        public bool processVarient { get { return m_Step == BattleMapAreaEditorProcessStep.Varients; } }
+        public bool processVarients { get { return m_Step == BattleMapAreaEditorProcessStep.Varients; } }
 
         ////////////////////////
         ////    Template    ////
@@ -135,6 +334,10 @@ namespace EIJ.BattleMap
             {
                 m_CellHolderLocations.Add(location);
                 m_VariantCellHolderTypes.Add(VariantCellHolderType.Entry);
+            }
+            foreach(var variant in m_Variants)
+            {
+                variant.MatchNewTemplate(m_Type, ref m_CellHolderLocations, ref m_VariantCellHolderTypes);
             }
             m_Step = BattleMapAreaEditorProcessStep.Varients;
             return string.Empty;
@@ -250,12 +453,16 @@ namespace EIJ.BattleMap
             }
             return true;
         }
-
         public void ReeditTemplate()
         {
             m_Step = BattleMapAreaEditorProcessStep.Template;
             m_CellHolderLocations.Clear();
             m_VariantCellHolderTypes.Clear();
+            m_VariantEditingIndex = -1;
+            foreach(var variant in m_Variants)
+            {
+                variant.Decompile();
+            }
         }
         #endregion
         ////////////////////////
@@ -264,6 +471,13 @@ namespace EIJ.BattleMap
         #region [ Varients  ]
         [SerializeField] List<Int2> m_CellHolderLocations = new List<Int2>();
         [SerializeField] List<VariantCellHolderType> m_VariantCellHolderTypes = new List<VariantCellHolderType>();
+        [SerializeField] int m_VariantEditingIndex = -1;
+        public int editingVariant { get { return m_VariantEditingIndex; } set { m_VariantEditingIndex = value; } }
+        public void ClearCurrentEdit()
+        {
+            if (m_VariantEditingIndex < 0) return;
+            m_Variants[m_VariantEditingIndex].Clear();
+        }
         public bool GetHolderInfo(out int count, out Int2[] locations, out VariantCellHolderType[] types)
         {
             count = m_CellHolderLocations.Count;
@@ -276,6 +490,66 @@ namespace EIJ.BattleMap
                 locations[i] = m_CellHolderLocations[i];
             }
             return true;
+        }
+        public void AddNewVariants()
+        {
+            m_Variants.Add(new BattleMapAreaVariant());
+            m_VariantEditingIndex = m_Variants.Count - 1;
+        }
+        public void RemoveVariantAt(int index)
+        {
+            if (index < 0 || index >= m_Variants.Count) return;
+            m_Variants.RemoveAt(index);
+            if (m_VariantEditingIndex == index) m_VariantEditingIndex = -1;
+            else if (m_VariantEditingIndex > index) m_VariantEditingIndex--;
+        }
+        public void CreateVariantCopyFrom(int index)
+        {
+            if (index < 0 || index >= m_Variants.Count) return;
+            m_Variants.Add(m_Variants[index].CreateCopy());
+            m_VariantEditingIndex = m_Variants.Count - 1;
+        }
+        public void ClearAllVariants()
+        {
+            m_Variants.Clear();
+        }
+        public void SetEditing(int index)
+        {
+            m_VariantEditingIndex = index;
+        }
+        public void AddVariantCell(Int2 location, BattleMapCellType type)
+        {
+            if (m_VariantEditingIndex < 0) return;
+            int index = m_CellHolderLocations.IndexOf(location);
+            if (index < 0) return;
+            VariantCellHolderType holderType = m_VariantCellHolderTypes[index];
+            if (holderType == VariantCellHolderType.Entry) return;
+            if (type == BattleMapCellType.Home && m_Type == BattleMapAreaType.Home && holderType == VariantCellHolderType.Inside)
+                m_Variants[m_VariantEditingIndex].AddHome(location);
+            else if (type == BattleMapCellType.Spawn && m_Type == BattleMapAreaType.Spawn && holderType == VariantCellHolderType.Inside)
+                m_Variants[m_VariantEditingIndex].AddSpawn(location);
+            else if (type == BattleMapCellType.Path && holderType == VariantCellHolderType.Inside)
+                m_Variants[m_VariantEditingIndex].AddPath(location);
+            else if (type == BattleMapCellType.Platform)
+                m_Variants[m_VariantEditingIndex].AddPlatform(location);
+        }
+        public void RemoveVarientCell(Int2 location)
+        {
+            if (m_VariantEditingIndex < 0) return;
+            int index = m_CellHolderLocations.IndexOf(location);
+            if (index < 0) return;
+            m_Variants[m_VariantEditingIndex].RemoveCell(location);
+        }
+        public bool GetCurrentVariantInfo(out int cellCount, out Int2[] locations, out BattleMapCellType[] types)
+        {
+            if(m_VariantEditingIndex < 0)
+            {
+                cellCount = 0;
+                locations = new Int2[0];
+                types = new BattleMapCellType[0];
+                return false;
+            }
+            return (m_Variants[m_VariantEditingIndex].GetInfo(out cellCount, out locations, out types));
         }
         #endregion
 #endif
