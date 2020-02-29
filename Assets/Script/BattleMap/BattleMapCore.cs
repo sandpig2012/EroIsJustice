@@ -45,6 +45,29 @@ namespace EIJ.BattleMap {
             this.x = x;
             this.y = y;
         }
+        /// <summary>
+        /// Int2(0, 0)
+        /// </summary>
+        public static Int2 Zero { get { return new Int2(0, 0); } }
+        public static bool operator ==(Int2 a, Int2 b) => (a.x == b.x && a.y == b.y);
+        public static bool operator !=(Int2 a, Int2 b) => !(a.x == b.x && a.y == b.y);
+        public static Int2 operator -(Int2 a) => new Int2(-a.x, -a.y);
+        public static Int2 operator +(Int2 a) => new Int2(a.x, a.y);
+        public static Int2 operator +(Int2 a, Int2 b) => new Int2(a.x + b.x, a.y + b.y);
+        public static Int2 operator -(Int2 a, Int2 b) => new Int2(a.x - b.x, a.y - b.y);
+        public static Int2 operator *(Int2 a, Int2 b) => new Int2(a.x * b.x, a.y * b.y);
+        public override bool Equals(object obj)
+        {
+            return base.Equals(obj);
+        }
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+        public override string ToString()
+        {
+            return "[" + x + ", " + y + "]";
+        }
     }
 
     public class BattleMapCell
@@ -52,7 +75,7 @@ namespace EIJ.BattleMap {
         public BattleMapCellType type { get; set; }
         public Int2 location { get; private set; }
 
-
+        
         public BattleMapCell(Int2 location)
         {
             this.type = BattleMapCellType.Block;
@@ -149,7 +172,8 @@ namespace EIJ.BattleMap {
     public class BattleMapPath
     {
         //area local location
-        public List<Int2> m_PathLocations = new List<Int2>();
+        [SerializeField] private List<Int2> _PathLocations = new List<Int2>();
+        public List<Int2> PathLocations { get { return _PathLocations; } set { _PathLocations = value; } }
     }
     #endregion
 }
