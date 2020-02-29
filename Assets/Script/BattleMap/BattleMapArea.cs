@@ -311,7 +311,7 @@ namespace EIJ.BattleMap {
 		}
 		string FindPathForHomeAndSpawnType(Int2 start, ref List<Int2> entries, ref List<CellAccessData> accessDatas) {
 			foreach (Int2 entry in entries) {
-				string log = FindPathBetweenCell(start, entry, ref accessDatas, out BattleMapPath pathFound);
+				string log = FindPath(start, entry, ref accessDatas, out BattleMapPath pathFound);
 				if (log.Length > 0) {
 					_Paths.Clear();
 					return log;
@@ -326,7 +326,7 @@ namespace EIJ.BattleMap {
 			int numEntry = entries.Count;
 			for (int i = 0; i < numEntry - 1; i++) {
 				for (int j = i + 1; j < numEntry; j++) {
-					string log = FindPathBetweenCell(entries[i], entries[j], ref accessDatas, out BattleMapPath pathFound);
+					string log = FindPath(entries[i], entries[j], ref accessDatas, out BattleMapPath pathFound);
 					if (log.Length > 0) {
 						_Paths.Clear();
 						return log;
@@ -338,17 +338,9 @@ namespace EIJ.BattleMap {
 			}
 			return string.Empty;
 		}
-		string FindPathBetweenCell(Int2 start, Int2 end, ref List<CellAccessData> accessDatas, out BattleMapPath pathFound) {
+		string FindPath(Int2 start, Int2 end, ref List<CellAccessData> accessDatas, out BattleMapPath pathFound) {
 			pathFound = new BattleMapPath();
 			bool pathExist = false;
-			//exit next to entry
-			if ((end.x == start.x && (end.y == start.y - 1 || end.y == start.y + 1))
-				|| ((end.y == start.y) && (end.x == start.x - 1 || end.x == start.x + 1))) {
-				pathFound.PathLocations = new List<Int2> { start, end };
-				pathExist = true;
-			}
-			//check other root
-			//exit not next to entry			
 			List<List<Int2>> steps = new List<List<Int2>>();
 			List<Int2> cellChecked = new List<Int2>() { start };
 			steps.Add(new List<Int2>() { start });
@@ -1012,7 +1004,7 @@ namespace EIJ.BattleMap {
 			for (int i = 0; i < 20; i++) {
 				float randomNumber = UnityEngine.Random.Range(0f, 36f);
 				int randomStringIndex = Mathf.FloorToInt(randomNumber);
-				if(randomStringIndex > 35) {
+				if (randomStringIndex > 35) {
 					randomStringIndex = 35;
 				}
 				id += Charactors[randomStringIndex];
