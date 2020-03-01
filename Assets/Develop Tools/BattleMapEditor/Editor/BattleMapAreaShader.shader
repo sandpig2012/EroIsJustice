@@ -1,4 +1,4 @@
-﻿Shader "Hidden/EditorGUI/BattleMapAreaEditorShader"
+﻿Shader "Hidden/EditorGUI/BattleMapEditorShader"
 {
     Properties
     {
