@@ -10,7 +10,7 @@ namespace EIJ.BattleMap {
 	/// 战斗地图模板编辑器窗口
 	/// </summary>
 	public class BattleMapAreaEditorWindow : EditorWindow {
-		[MenuItem("Develop Tools/BattleMapArea Editor")]
+		[MenuItem("Develop Tools/Battle Map/Area Editor", priority = 1)]
 		static void Init() {
 			BattleMapAreaEditorWindow window = (BattleMapAreaEditorWindow)GetWindow(typeof(BattleMapAreaEditorWindow), false, "战斗地图模块编辑器");
 			window.Show();
@@ -18,7 +18,7 @@ namespace EIJ.BattleMap {
 
 		private void OnEnable() {
 			minSize = new Vector2(530, 350);
-			Shader GUIShader = Shader.Find("Hidden/EditorGUI/BattleMapAreaEditorShader");
+			Shader GUIShader = Shader.Find("Hidden/EditorGUI/BattleMapEditorShader");
 			if (GUIShader == null) {
 				EditorUtility.DisplayDialog("Error", "BattleMapArea Editor: GUIShader not Found!", "OK");
 				Close();
@@ -28,8 +28,8 @@ namespace EIJ.BattleMap {
 			Undo.undoRedoPerformed += Repaint;
 
 			////////////////////////////
-			////    Get Prop ID    /////
-			////////////////////////////
+			////    Get Prop ID    ////
+			//////////////////////////
 			#region [ Get Prop ID ]
 			PID.MainTex = Shader.PropertyToID("_MainTex");
 			PID.Color = Shader.PropertyToID("_Color");
@@ -37,97 +37,72 @@ namespace EIJ.BattleMap {
 			PID.DstBlend = Shader.PropertyToID("_DstBlend");
 			#endregion
 		}
-
 		private void OnDisable() {
 			CloseFile();
 			Undo.undoRedoPerformed -= Repaint;
 		}
-
-		/////////////////////////////
-		////    File Function    ////
-		/////////////////////////////
-		#region [ File Function ]
-		static void OpenFile(BattleMapArea file) {
-			if (file == null) return;
-			Opened = file;
-			TargetSerializedObject = new SerializedObject(file);
-			if (TargetSerializedObject != null) DataOpened = true;
-			ResetTools();
-			//////////////////////////
-			////    Properties    ////
-			//////////////////////////
-			#region [ Properties ]
-			#endregion
-			GUI.changed = true;
-		}
-		static void CloseFile() {
-			if (Opened != null) {
-				Opened.SetEditing(-1);
-				Undo.ClearUndo(Opened);
+		private void OnGUI() {
+			if (DataOpened) TargetSerializedObject.Update();
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.BeginVertical();
+			EditorGUILayout.BeginHorizontal();
+			if (GUILayout.Button("关闭")) CloseFile();
+			if (GUILayout.Button("打开选中文件")) TryOpenSelected();
+			EditorGUILayout.EndHorizontal();
+			EditorGUI.BeginDisabledGroup(true);
+			EditorGUILayout.ObjectField(Opened, typeof(BattleMapArea), false);
+			EditorGUI.EndDisabledGroup();
+			GuiLine();
+			if (DataOpened) {
+				EditorGUILayout.BeginHorizontal();
+				EditorGUILayout.LabelField("类型:", EditorStyles.boldLabel, GUILayout.Width(50));
+				if (Opened.ProcessTemplate) {
+					BattleMapAreaType newType = (BattleMapAreaType)EditorGUILayout.IntPopup((int)Opened.Type, Styles.TypePopupString, Styles.TypePopupValue);
+					if (newType != Opened.Type) {
+						Undo.RegisterCompleteObjectUndo(Opened, "Change Type");
+						Opened.Type = newType;
+					}
+				}
+				else {
+					EditorGUILayout.LabelField(Styles.TypePopupString[(int)Opened.Type], Styles.TypeLabelStyle, GUILayout.Width(50));
+				}
+				EditorGUILayout.EndHorizontal();
 			}
-			Opened = null;
-			TargetSerializedObject = null;
-			DataOpened = false;
-			ResetTools();
-			//////////////////////////
-			////    Properties    ////
-			//////////////////////////
-			#region [ Properties ]
-			#endregion
-			GUI.changed = true;
-		}
-		static BattleMapArea GetSelectedFileFromAssets() {
-			string[] guids = Selection.assetGUIDs;
-			if (guids.Length <= 0) {
-				return null;
+			DrawProgress();
+			DrawTools();
+			DrawVariantsMenu();
+			ScrollPos = EditorGUILayout.BeginScrollView(ScrollPos);
+			DrawVariantsList();
+			EditorGUILayout.EndScrollView();
+			EditorGUILayout.EndVertical();
+			Rect mapWindowRect = EditorGUILayout.GetControlRect(new GUILayoutOption[] {
+				GUILayout.Width(position.width - 180),
+				GUILayout.Height(position.height) });
+			SetCursor(mapWindowRect);
+			DrawMapWindow(mapWindowRect);
+			if (!DataOpened) {
+				DrawNoFileOpenText(mapWindowRect);
 			}
-			BattleMapArea load = null;
-			foreach (string guid in guids) {
-				load = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(guid), typeof(BattleMapArea)) as BattleMapArea;
-			}
-			return load;
-		}
-		static void TryOpenSelected() {
-			BattleMapArea target = GetSelectedFileFromAssets();
-			if (target != null) {
-				CloseFile();
-				OpenFile(target);
-			}
-			GUI.changed = true;
-		}
-
-		/// <summary>
-		/// 在编辑窗口中打开
-		/// </summary>
-		/// <param name="instanceID">instanceID</param>
-		/// <param name="line">line</param>
-		/// <returns>是否成功打开</returns>
-		[OnOpenAssetAttribute(1)]
-		public static bool OpenFileInWindow(int instanceID, int line) {
-			Object file = EditorUtility.InstanceIDToObject(instanceID);
-			if (file.GetType() == typeof(BattleMapArea)) {
-				Init();
-				CloseFile();
-				OpenFile(file as BattleMapArea);
-				return true;
-			}
-			else {
-				return false;
+			EditorGUILayout.EndHorizontal();
+			if (DataOpened) {
+				TargetSerializedObject.ApplyModifiedProperties();
 			}
 		}
 
-		#endregion
+		Vector2 ScrollPos = Vector2.zero;
+		static readonly int DrawMapWindowHash = "EIJ.BattleMap.BattleMapAreaEditorWindow.DrawMapWindow".GetHashCode();
 
+		//------------------------- Varients & Functions -------------------------//
 		//////////////////////
-		////    Styles    ////
-		//////////////////////
+		////    Styles    ///
+		////////////////////
 		#region [ Styles ]
 		static class Styles {
 			public static Color BackgroundColor = new Color32(35, 35, 35, 255);
 			public static Color GridColor = new Color32(255, 255, 255, 50);
 			public static Color[] TemplateCellColors = new Color[]{
 				new Color32(65, 65, 65, 255),
-				new Color32(180, 160, 90, 255) };
+				new Color32(180, 160, 90, 255)};
 			public static Color[] HolderCellColors = new Color[]{
 				new Color32(55, 65, 55, 255),
 				new Color32(65, 55, 55, 255),
@@ -138,6 +113,9 @@ namespace EIJ.BattleMap {
 				new Color32(170, 170, 180, 255),
 				new Color32(30, 230, 30, 255),
 				new Color32(200, 30, 30, 255)};
+			public static Color[] OutlineColors = new Color[]{
+				new Color32(170, 15, 0, 255),
+				new Color32(0, 170, 10, 255)};
 
 			public static GUIStyle DefaultButtonStyle = new GUIStyle(GUI.skin.button);
 			public static GUIStyle CurrentToolButtonStyle = GetCurrentToolButtonStyle();
@@ -153,8 +131,12 @@ namespace EIJ.BattleMap {
 			public static GUIStyle DetachButtonStyle = GetDetachButtonStyle();
 			public static GUIStyle CompiledVariantsStyle = GetCompiledVariantStyle();
 			public static GUIStyle ViewButtonStyle = GetViewButtonStyle();
+			public static GUIStyle NoFileOpenedTextStyle = GetNoFileOpenedTextStyle();
 		}
-
+		///////////////////////////////
+		////    Style Generator    ///
+		/////////////////////////////
+		#region [ Style Generator ]
 		static GUIStyle GetCurrentToolButtonStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.button) { };
 			style.fontStyle = FontStyle.Bold;
@@ -210,24 +192,92 @@ namespace EIJ.BattleMap {
 			style.active.textColor = textColor;
 			return style;
 		}
+		static GUIStyle GetNoFileOpenedTextStyle() {
+			GUIStyle style = new GUIStyle(GUI.skin.label) { fixedHeight = 54 };
+			style.fontStyle = FontStyle.Bold;
+			style.fontSize = 32;
+			Color textColor = new Color32(100, 100, 100, 140);
+			style.normal.textColor = textColor;
+			return style;
+		}
 		#endregion
+		#endregion
+		/////////////////////////////
+		////    File Function    ///
+		///////////////////////////
+		#region [ File Function ]
+		static void OpenFile(BattleMapArea file) {
+			if (file == null) return;
+			Opened = file;
+			TargetSerializedObject = new SerializedObject(file);
+			if (TargetSerializedObject != null) DataOpened = true;
+			ResetTools();
+			GUI.changed = true;
+		}
+		static void CloseFile() {
+			if (Opened != null) {
+				Opened.SetEditing(-1);
+				Undo.ClearUndo(Opened);
+			}
+			Opened = null;
+			TargetSerializedObject = null;
+			DataOpened = false;
+			ResetTools();
+			GUI.changed = true;
+		}
+		static BattleMapArea GetSelectedFileFromAssets() {
+			string[] guids = Selection.assetGUIDs;
+			if (guids.Length <= 0) {
+				return null;
+			}
+			BattleMapArea load = null;
+			foreach (string guid in guids) {
+				load = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(guid), typeof(BattleMapArea)) as BattleMapArea;
+			}
+			return load;
+		}
+		static void TryOpenSelected() {
+			BattleMapArea target = GetSelectedFileFromAssets();
+			if (target != null) {
+				CloseFile();
+				OpenFile(target);
+			}
+			GUI.changed = true;
+		}
 
-		Vector2 ScrollPos = Vector2.zero;
-		static readonly int DrawMapWindowHash = "EIJ.BattleMap.BattleMapAreaEditorWindow.DrawMapWindow".GetHashCode();
+		/// <summary>
+		/// 在编辑窗口中打开
+		/// </summary>
+		/// <param name="instanceID">instanceID</param>
+		/// <param name="line">line</param>
+		/// <returns>是否成功打开</returns>
+		[OnOpenAssetAttribute(1)]
+		public static bool OpenFileInWindow(int instanceID, int line) {
+			Object file = EditorUtility.InstanceIDToObject(instanceID);
+			if (file.GetType() == typeof(BattleMapArea)) {
+				Init();
+				CloseFile();
+				OpenFile(file as BattleMapArea);
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
 
+		#endregion
 		///////////////////////////////
-		////    Object Variants    ////
-		///////////////////////////////
+		////    Object Variants    ///
+		/////////////////////////////
 		#region [ Object Variants ]
 		static BattleMapArea Opened = null;
 		static SerializedObject TargetSerializedObject = null;
 		static bool DataOpened = false;
 		#endregion
-
-		//////////////////////////////
-		////    Paint Variants    ////
-		//////////////////////////////
-		#region [ Paint Variants ]
+		/////////////////////////////
+		////    Tool Variants    ///
+		///////////////////////////
+		#region [ Tool Variants ]
 		enum TemplateToolType {
 			Normal = 0,
 			Entry = 1,
@@ -246,35 +296,34 @@ namespace EIJ.BattleMap {
 			CurrentVariantsToolType = VariantsToolType.Path;
 		}
 		#endregion
-
 		///////////////////////////////
-		////    Canvas Variants    ////
-		///////////////////////////////
+		////    Canvas Variants    ///
+		/////////////////////////////
 		#region [ Canvas Variants ]
 		const float CameraRange = 10f;
+		const float MinScale = 0.5f;
+		const float MaxScale = 2.0f;
 		Vector2 CameraPosition = Vector2.zero;
 		float ViewScale = 1.0f;
 		Vector2 RecordMousePosition = Vector2.zero;
 		Vector2 RecordCameraPosition = Vector2.zero;
 		Material GUIMaterial = null;
-
+		#endregion
 		///////////////////////
-		////    Control    ////
-		///////////////////////
+		////    Control    ///
+		/////////////////////
 		#region [ Control ]
 		enum Action {
 			None,
-			Dragging,
+			Panning,
 			Painting,
 			Erazing,
 		}
-
 		Action CurrentAction = Action.None;
 		#endregion
-
 		////////////////////////
-		////    Prop ID    /////
-		////////////////////////
+		////    Prop ID    ////
+		//////////////////////
 		#region [ Prop ID ]
 		static class PID {
 			public static int MainTex;
@@ -283,57 +332,12 @@ namespace EIJ.BattleMap {
 			public static int DstBlend;
 		}
 		#endregion
-		#endregion
-
-		private void OnGUI() {
-			if (DataOpened) TargetSerializedObject.Update();
-			EditorGUILayout.BeginHorizontal();
-			EditorGUILayout.BeginVertical();
-			EditorGUILayout.BeginHorizontal();
-			if (GUILayout.Button("关闭")) CloseFile();
-			if (GUILayout.Button("打开选中文件")) TryOpenSelected();
-			EditorGUILayout.EndHorizontal();
-			EditorGUI.BeginDisabledGroup(true);
-			EditorGUILayout.ObjectField(Opened, typeof(BattleMapArea), false);
-			EditorGUI.EndDisabledGroup();
-			GuiLine();
-			if (DataOpened) {
-				EditorGUILayout.BeginHorizontal();
-				EditorGUILayout.LabelField("类型:", EditorStyles.boldLabel, GUILayout.Width(50));
-				if (Opened.ProcessTemplate) {
-					BattleMapAreaType newType = (BattleMapAreaType)EditorGUILayout.IntPopup((int)Opened.Type, Styles.TypePopupString, Styles.TypePopupValue);
-					if (newType != Opened.Type) {
-						Undo.RegisterCompleteObjectUndo(Opened, "Change Type");
-						Opened.Type = newType;
-					}
-				}
-				else {
-					EditorGUILayout.LabelField(Styles.TypePopupString[(int)Opened.Type], Styles.TypeLabelStyle, GUILayout.Width(50));
-				}
-				EditorGUILayout.EndHorizontal();
-			}
-			DrawProgress();
-			DrawTools();
-			DrawVariantsMenu();
-			ScrollPos = EditorGUILayout.BeginScrollView(ScrollPos);
-			DrawVariantsList();
-			EditorGUILayout.EndScrollView();
-			EditorGUILayout.EndVertical();
-			Rect mapWindowRect = EditorGUILayout.GetControlRect(new GUILayoutOption[] {
-			GUILayout.Width(position.width - 180),
-			GUILayout.Height(position.height) });
-			SetCursor(mapWindowRect);
-			DrawMapWindow(mapWindowRect);
-			EditorGUILayout.EndHorizontal();
-			if (DataOpened) TargetSerializedObject.ApplyModifiedProperties();
-		}
-
 		//////////////////////
-		////    Cursor    ////
-		//////////////////////
+		////    Cursor    ///
+		////////////////////
 		#region [ Cursor ]
 		void SetCursor(Rect rect) {
-			if (CurrentAction == Action.Dragging) {
+			if (CurrentAction == Action.Panning) {
 				EditorGUIUtility.AddCursorRect(rect, MouseCursor.Pan);
 			}
 			else {
@@ -348,9 +352,91 @@ namespace EIJ.BattleMap {
 			}
 		}
 		#endregion
+		/////////////////////////////
+		////    Tool Function    ///
+		///////////////////////////
+		#region [ Tool Function ]
+		void EditPaint(Vector2 canvasPosition, Action action) {
+			if (!DataOpened) return;
+			Int2 location = new Int2(Mathf.FloorToInt(canvasPosition.x), Mathf.FloorToInt(canvasPosition.y));
+			if (Opened.ProcessTemplate) {
+				if (action == Action.Painting) {
+					Opened.AddBattleMapAreaHolder(location, (BattleMapAreaHolderType)CurrentTemplateToolType);
+				}
+				else if (action == Action.Erazing) {
+					Opened.RemoveBattleMapAreaHolder(location);
+				}
+			}
+			else if (Opened.ProcessVarients) {
+				if (action == Action.Painting) {
+					Opened.AddVariantCell(location, (BattleMapCellType)CurrentVariantsToolType);
+				}
+				else if (action == Action.Erazing) {
+					Opened.RemoveVarientCell(location);
+				}
+			}
+		}
+
+		void SwitchTool() {
+			if (!DataOpened) return;
+			if (Opened.ProcessCompleted) return;
+			if (focusedWindow == this && CurrentAction == Action.None) {
+				Event currentEvent = Event.current;
+				switch (currentEvent.type) {
+				case EventType.KeyDown:
+					if (Opened.ProcessTemplate) {
+						switch (currentEvent.keyCode) {
+						case KeyCode.Alpha1:
+							CurrentTemplateToolType = TemplateToolType.Normal;
+							currentEvent.Use();
+							GUI.changed = true;
+							break;
+						case KeyCode.Alpha2:
+							CurrentTemplateToolType = TemplateToolType.Entry;
+							currentEvent.Use();
+							GUI.changed = true;
+							break;
+						}
+					}
+					else if (Opened.ProcessVarients && IsVariantEditalbe()) {
+						switch (currentEvent.keyCode) {
+						case KeyCode.Alpha1:
+							CurrentVariantsToolType = VariantsToolType.Path;
+							currentEvent.Use();
+							GUI.changed = true;
+							break;
+						case KeyCode.Alpha2:
+							CurrentVariantsToolType = VariantsToolType.Platform;
+							currentEvent.Use();
+							GUI.changed = true;
+							break;
+						case KeyCode.Alpha3:
+							if (Opened.Type == BattleMapAreaType.Home) {
+								CurrentVariantsToolType = VariantsToolType.Home;
+								currentEvent.Use();
+								GUI.changed = true;
+							}
+							break;
+						case KeyCode.Alpha4:
+							if (Opened.Type == BattleMapAreaType.Spawn) {
+								CurrentVariantsToolType = VariantsToolType.Spawn;
+								currentEvent.Use();
+								GUI.changed = true;
+							}
+							break;
+						}
+					}
+					break;
+				}
+			}
+		}
+		#endregion
+		//------------------------------------------------------------------------//
+
+		//------------------------------- Draw GUI -------------------------------//
 		////////////////////////////
-		////    Draw Process    ////
-		////////////////////////////
+		////    Draw Process    ///
+		//////////////////////////
 		#region [ Draw Progress ]
 		void DrawProgress() {
 			GuiLine();
@@ -395,7 +481,7 @@ namespace EIJ.BattleMap {
 				EditorGUILayout.LabelField("已完成", Opened.ProcessCompleted ? Styles.CurrentProcessStyle : Styles.DefaultLabelStyle, GUILayout.Width(100));
 				if (Opened.ProcessCompleted) {
 					if (GUILayout.Button("返回编辑")) {
-						if(EditorUtility.DisplayDialog("'o'!", "重新编辑可能会影响使用这个模块的战斗地图模板！", "确定", "取消")){
+						if (EditorUtility.DisplayDialog("'o'!", "重新编辑可能会影响使用这个模块的战斗地图模板！", "确定", "取消")) {
 							Undo.RegisterCompleteObjectUndo(Opened, "Return to Editalbe");
 							Opened.ReturnToEditable();
 						}
@@ -406,8 +492,8 @@ namespace EIJ.BattleMap {
 		}
 		#endregion
 		//////////////////////////
-		////    Draw Tools    ////
-		//////////////////////////
+		////    Draw Tools    ///
+		////////////////////////
 		#region [ Draw Tools ]
 		void DrawTools() {
 			GuiLine();
@@ -479,8 +565,8 @@ namespace EIJ.BattleMap {
 		}
 		#endregion
 		/////////////////////////////////
-		////    Draw Variants Menu   ////
-		/////////////////////////////////
+		////    Draw Variants Menu   ///
+		///////////////////////////////
 		#region [ Draw Variants Menu]
 		void DrawVariantsMenu() {
 			GuiLine();
@@ -505,8 +591,8 @@ namespace EIJ.BattleMap {
 		}
 		#endregion
 		/////////////////////////////////
-		////    Draw Variants List   ////
-		/////////////////////////////////
+		////    Draw Variants List   ///
+		///////////////////////////////
 		#region [ Draw Variants List]
 		void DrawVariantsList() {
 			if (!DataOpened) return;
@@ -594,8 +680,8 @@ namespace EIJ.BattleMap {
 		}
 		#endregion
 		///////////////////////////////
-		////    Draw Map Window    ////
-		///////////////////////////////
+		////    Draw Map Window    ///
+		/////////////////////////////
 		#region [ Draw Map Window ]
 		void DrawMapWindow(Rect rect) {
 			Event currentEvent = Event.current;
@@ -603,13 +689,13 @@ namespace EIJ.BattleMap {
 
 			switch (currentEvent.GetTypeForControl(controlID)) {
 			///////////////////////
-			////    Control    ////
-			///////////////////////
+			////    Control    ///
+			/////////////////////
 			#region [ Control ]
 			case EventType.MouseDown:
 				if (rect.Contains(currentEvent.mousePosition)) {
 					if (currentEvent.button == 2 && CurrentAction == Action.None) {
-						CurrentAction = Action.Dragging;
+						CurrentAction = Action.Panning;
 						RecordMousePosition = currentEvent.mousePosition;
 						RecordCameraPosition = CameraPosition;
 						GUIUtility.hotControl = controlID;
@@ -641,7 +727,7 @@ namespace EIJ.BattleMap {
 				break;
 			case EventType.MouseDrag:
 				if (GUIUtility.hotControl == controlID) {
-					if (CurrentAction == Action.Dragging) {
+					if (CurrentAction == Action.Panning) {
 						GUI.changed = true;
 						Vector2 mouseOffset = currentEvent.mousePosition - RecordMousePosition;
 						mouseOffset.y = -mouseOffset.y;
@@ -678,7 +764,7 @@ namespace EIJ.BattleMap {
 							scaleChange = 1.1f;
 						else if (currentEvent.delta.y < 0) //wheel down
 							scaleChange = 1f / 1.1f;
-						float newViewScale = Mathf.Clamp(ViewScale * scaleChange, 0.5f, 2.0f);
+						float newViewScale = Mathf.Clamp(ViewScale * scaleChange, MinScale, MaxScale);
 						scaleChange = newViewScale / ViewScale;
 						Vector2 mousePos = currentEvent.mousePosition;
 						Vector2 screenOffset = new Vector2(
@@ -695,7 +781,6 @@ namespace EIJ.BattleMap {
 				break;
 
 			#endregion
-
 			case EventType.Repaint:
 				RenderCanvas(rect);
 				break;
@@ -705,7 +790,10 @@ namespace EIJ.BattleMap {
 		void RenderCanvas(Rect rect) {
 			GUI.BeginGroup(rect);
 			GL.PushMatrix();
-
+			//////////////////////////////
+			////    Setup Viewport    ///
+			////////////////////////////
+			#region [ Setup Viewport ]
 			Rect viewportRect = rect;
 			if (viewportRect.position.x < 0f) {
 				viewportRect.width += viewportRect.position.x;
@@ -719,14 +807,12 @@ namespace EIJ.BattleMap {
 				if (viewportRect.height <= 0f)
 					return;
 			}
-
 			viewportRect.y = position.height - viewportRect.y - viewportRect.height;
 			GL.Viewport(EditorGUIUtility.PointsToPixels(viewportRect));
-
-
+			#endregion
 			////////////////////////////////
-			////    Clear Background    ////
-			////////////////////////////////
+			////    Clear Background    ///
+			//////////////////////////////
 			#region [ Clear Background ]
 			GL.LoadIdentity();
 			GL.LoadProjectionMatrix(Matrix4x4.Ortho(0f, 1f, 0f, 1f, -1f, 1f));
@@ -743,10 +829,10 @@ namespace EIJ.BattleMap {
 			GL.Vertex3(0, 1, 0);
 			GL.End();
 			#endregion
+			//////////////////////////////
+			////    Setup Matrices    ///
 			////////////////////////////
-			////    Draw Content    ////
-			////////////////////////////
-			#region [ Draw Content ]
+			#region [ Setup Matrices ]
 			GL.LoadIdentity();
 			float aspect = viewportRect.height / viewportRect.width;
 			Vector2 visibleArea = new Vector2(10f * ViewScale, 10f * aspect * ViewScale);
@@ -755,7 +841,11 @@ namespace EIJ.BattleMap {
 			Matrix4x4 viewMatrix =
 				 Matrix4x4.Translate(new Vector3(-CameraPosition.x, -CameraPosition.y, 0));
 			GL.MultMatrix(viewMatrix);
-
+			#endregion
+			////////////////////////////
+			////    Draw Content    ///
+			//////////////////////////
+			#region [ Draw Content ]
 			if (DataOpened) {
 				int cellCount = 0;
 				Int2[] locations;
@@ -793,6 +883,104 @@ namespace EIJ.BattleMap {
 							GL.Vertex3(0 + pos.x, 1 + pos.y, 0);
 							GL.End();
 						}
+						////////////////////////////
+						////    Draw Outline    ////
+						////////////////////////////
+						#region [ Draw Outline ]
+						List<Int2> locationList = new List<Int2>(locations);
+						int currentIndex;
+						bool hasLeft, hasRight, hasDown, hasTop;
+						for (int i = 0; i < cellCount; i++) {
+							hasLeft = false;
+							hasRight = false;
+							hasDown = false;
+							hasTop = false;
+							int colorIndex = types[i] == VariantCellHolderType.Entry ? 1 : 0;
+							Int2 pos = locations[i];
+							currentIndex = locationList.IndexOf(pos + new Int2(1, 0));
+							if (currentIndex < 0) {
+								GL.Begin(GL.TRIANGLE_STRIP);
+								GL.Color(Styles.OutlineColors[colorIndex]);
+								GL.Vertex3(pos.x + 1.1f, pos.y, 0);
+								GL.Vertex3(pos.x + 1, pos.y, 0);
+								GL.Vertex3(pos.x + 1.1f, pos.y + 1, 0);
+								GL.Vertex3(pos.x + 1, pos.y + 1, 0);
+								GL.End();
+								hasRight = true;
+							}
+							currentIndex = locationList.IndexOf(pos + new Int2(-1, 0));
+							if (currentIndex < 0) {
+								GL.Begin(GL.TRIANGLE_STRIP);
+								GL.Color(Styles.OutlineColors[colorIndex]);
+								GL.Vertex3(pos.x - 0.1f, pos.y, 0);
+								GL.Vertex3(pos.x, pos.y, 0);
+								GL.Vertex3(pos.x - 0.1f, pos.y + 1, 0);
+								GL.Vertex3(pos.x, pos.y + 1, 0);
+								GL.End();
+								hasLeft = true;
+							}
+							currentIndex = locationList.IndexOf(pos + new Int2(0, 1));
+							if (currentIndex < 0) {
+								GL.Begin(GL.TRIANGLE_STRIP);
+								GL.Color(Styles.OutlineColors[colorIndex]);
+								GL.Vertex3(pos.x + 1, pos.y + 1, 0);
+								GL.Vertex3(pos.x, pos.y + 1, 0);
+								GL.Vertex3(pos.x + 1, pos.y + 1.1f, 0);
+								GL.Vertex3(pos.x, pos.y + 1.1f, 0);
+								GL.End();
+								hasTop = true;
+							}
+							currentIndex = locationList.IndexOf(pos + new Int2(0, -1));
+							if (currentIndex < 0) {
+								GL.Begin(GL.TRIANGLE_STRIP);
+								GL.Color(Styles.OutlineColors[colorIndex]);
+								GL.Vertex3(pos.x, pos.y, 0);
+								GL.Vertex3(pos.x, pos.y - 0.1f, 0);
+								GL.Vertex3(pos.x + 1, pos.y, 0);
+								GL.Vertex3(pos.x + 1, pos.y - 0.1f, 0);
+								GL.End();
+								hasDown = true;
+							}
+
+							if (hasTop && hasRight) {
+								GL.Begin(GL.TRIANGLE_STRIP);
+								GL.Color(Styles.OutlineColors[0]);
+								GL.Vertex3(pos.x + 1, pos.y + 1, 0);
+								GL.Vertex3(pos.x + 1, pos.y + 1.1f, 0);
+								GL.Vertex3(pos.x + 1.1f, pos.y + 1f, 0);
+								GL.Vertex3(pos.x + 1.1f, pos.y + 1.1f, 0);
+								GL.End();
+							}
+							if (hasTop && hasLeft) {
+								GL.Begin(GL.TRIANGLE_STRIP);
+								GL.Color(Styles.OutlineColors[0]);
+								GL.Vertex3(pos.x, pos.y + 1, 0);
+								GL.Vertex3(pos.x, pos.y + 1.1f, 0);
+								GL.Vertex3(pos.x - 0.1f, pos.y + 1f, 0);
+								GL.Vertex3(pos.x - 0.1f, pos.y + 1.1f, 0);
+								GL.End();
+							}
+							if (hasDown && hasRight) {
+								GL.Begin(GL.TRIANGLE_STRIP);
+								GL.Color(Styles.OutlineColors[0]);
+								GL.Vertex3(pos.x + 1, pos.y, 0);
+								GL.Vertex3(pos.x + 1.1f, pos.y, 0);
+								GL.Vertex3(pos.x + 1, pos.y - 0.1f, 0);
+								GL.Vertex3(pos.x + 1.1f, pos.y - 0.1f, 0);
+								GL.End();
+							}
+							if (hasDown && hasLeft) {
+								GL.Begin(GL.TRIANGLE_STRIP);
+								GL.Color(Styles.OutlineColors[0]);
+								GL.Vertex3(pos.x, pos.y, 0);
+								GL.Vertex3(pos.x - 0.1f, pos.y, 0);
+								GL.Vertex3(pos.x, pos.y - 0.1f, 0);
+								GL.Vertex3(pos.x - 0.1f, pos.y - 0.1f, 0);
+								GL.End();
+							}
+						}
+						locationList.Clear();
+						#endregion
 					}
 					BattleMapCellType[] cellTypes;
 					if (Opened.GetCurrentVariantInfo(out cellCount, out locations, out cellTypes)) {
@@ -811,28 +999,38 @@ namespace EIJ.BattleMap {
 			}
 			#endregion
 			/////////////////////////
-			////    Draw Grid    ////
-			/////////////////////////
+			////    Draw Grid    ///
+			///////////////////////
 			#region [ Draw Grid ]
+			Color gridFadeColor = Styles.GridColor;
+			gridFadeColor.a *= 0.5f;
+			if (ViewScale > 1.125f) {
+				gridFadeColor.a /= ViewScale * 0.8f;
+			}
 			GUIMaterial.SetInt(PID.SrcBlend, (int)BlendMode.SrcAlpha);
 			GUIMaterial.SetInt(PID.DstBlend, (int)BlendMode.OneMinusSrcAlpha);
 			GUIMaterial.SetPass(0);
 			GL.Begin(GL.LINES);
-			GL.Color(Styles.GridColor);
 			float loc = Mathf.Floor(-11f * ViewScale + CameraPosition.x);
-			for (int i = 0; i < 23 * ViewScale; i++, loc += 1f) {
+			int locInt = Mathf.RoundToInt(loc);
+			for (int i = 0; i < 23 * ViewScale; i++, loc += 1f, locInt++) {
+				GL.Color(((locInt / 10) * 10) == locInt ? Styles.GridColor : gridFadeColor);
 				GL.Vertex3(loc, visibleArea.y + CameraPosition.y, 0);
 				GL.Vertex3(loc, -visibleArea.y + CameraPosition.y, 0);
 			}
 			loc = Mathf.Floor(-11f * aspect * ViewScale + CameraPosition.y);
-			for (int i = 0; i < 23 * aspect * ViewScale; i++, loc += 1f) {
+			locInt = Mathf.RoundToInt(loc);
+			for (int i = 0; i < 23 * aspect * ViewScale; i++, loc += 1f, locInt++) {
+				GL.Color(((locInt / 10) * 10) == locInt ? Styles.GridColor : gridFadeColor);
 				GL.Vertex3(visibleArea.x + CameraPosition.x, loc, 0);
 				GL.Vertex3(-visibleArea.x + CameraPosition.x, loc, 0);
 			}
 			GL.End();
 			#endregion
-
-			//draw axis
+			///////////////////////////
+			////    Draw Axises    ///
+			/////////////////////////
+			#region [ Draw Axises ]
 			GUIMaterial.SetInt(PID.SrcBlend, (int)BlendMode.One);
 			GUIMaterial.SetInt(PID.DstBlend, (int)BlendMode.Zero);
 			GUIMaterial.SetPass(0);
@@ -844,93 +1042,26 @@ namespace EIJ.BattleMap {
 			GL.Vertex3(0f, 0f, 0f);
 			GL.Vertex3(1f, 0f, 0f);
 			GL.End();
-
+			#endregion
 			GL.PopMatrix();
 			GUI.EndGroup();
 		}
 		#endregion
-		/////////////////////////////
-		////    Tool Function    ////
-		/////////////////////////////
-		#region [ Tool Function ]
-		void EditPaint(Vector2 canvasPosition, Action action) {
-			if (!DataOpened) return;
-			Int2 location = new Int2(Mathf.FloorToInt(canvasPosition.x), Mathf.FloorToInt(canvasPosition.y));
-			if (Opened.ProcessTemplate) {
-				if (action == Action.Painting) {
-					Opened.AddBattleMapAreaHolder(location, (BattleMapAreaHolderType)CurrentTemplateToolType);
-				}
-				else if (action == Action.Erazing) {
-					Opened.RemoveBattleMapAreaHolder(location);
-				}
-			}
-			else if (Opened.ProcessVarients) {
-				if (action == Action.Painting) {
-					Opened.AddVariantCell(location, (BattleMapCellType)CurrentVariantsToolType);
-				}
-				else if (action == Action.Erazing) {
-					Opened.RemoveVarientCell(location);
-				}
-			}
-		}
-
-		void SwitchTool() {
-			if (!DataOpened) return;
-			if (Opened.ProcessCompleted) return;
-			if (focusedWindow == this && CurrentAction == Action.None) {
-				Event currentEvent = Event.current;
-				switch (currentEvent.type) {
-				case EventType.KeyDown:
-					if (Opened.ProcessTemplate) {
-						switch (currentEvent.keyCode) {
-						case KeyCode.Alpha1:
-							CurrentTemplateToolType = TemplateToolType.Normal;
-							currentEvent.Use();
-							GUI.changed = true;
-							break;
-						case KeyCode.Alpha2:
-							CurrentTemplateToolType = TemplateToolType.Entry;
-							currentEvent.Use();
-							GUI.changed = true;
-							break;
-						}
-					}
-					else if (Opened.ProcessVarients && IsVariantEditalbe()) {
-						switch (currentEvent.keyCode) {
-						case KeyCode.Alpha1:
-							CurrentVariantsToolType = VariantsToolType.Path;
-							currentEvent.Use();
-							GUI.changed = true;
-							break;
-						case KeyCode.Alpha2:
-							CurrentVariantsToolType = VariantsToolType.Platform;
-							currentEvent.Use();
-							GUI.changed = true;
-							break;
-						case KeyCode.Alpha3:
-							if (Opened.Type == BattleMapAreaType.Home) {
-								CurrentVariantsToolType = VariantsToolType.Home;
-								currentEvent.Use();
-								GUI.changed = true;
-							}
-							break;
-						case KeyCode.Alpha4:
-							if (Opened.Type == BattleMapAreaType.Spawn) {
-								CurrentVariantsToolType = VariantsToolType.Spawn;
-								currentEvent.Use();
-								GUI.changed = true;
-							}
-							break;
-						}
-					}
-					break;
-				}
-			}
+		////////////////////////////////////
+		////    Draw NoFileOpen Text    ///
+		//////////////////////////////////
+		#region [ Draw NoFileOpen Text ]
+		void DrawNoFileOpenText(Rect rect) {
+			Rect textRect = new Rect(rect.x + rect.width - 250, rect.y, rect.x + rect.width, rect.y + 20);
+			GUI.Label(textRect, "No File Opened", Styles.NoFileOpenedTextStyle);
 		}
 		#endregion
+		//------------------------------------------------------------------------//
+
+		//-------------------------------- Helper --------------------------------//
 		///////////////////////////////
-		////    Helper Function    ////
-		///////////////////////////////
+		////    Helper Function    ///
+		/////////////////////////////
 		#region [ Helper Function ]
 		void GuiLine(int height = 1) {
 			Rect rect = EditorGUILayout.GetControlRect(false, height);
@@ -946,5 +1077,6 @@ namespace EIJ.BattleMap {
 			return !Opened.Variants[editingIndex].Compiled;
 		}
 		#endregion
+		//------------------------------------------------------------------------//
 	}
 }

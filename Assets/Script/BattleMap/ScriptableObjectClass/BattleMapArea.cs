@@ -9,61 +9,27 @@ namespace EIJ.BattleMap {
 		Home = 1,
 		Spawn = 2,
 	}
-
-	[Serializable]
-	public struct pathIndex {
-		public int index;
-		public bool invert;
-		public pathIndex(int index, bool invert) {
-			this.index = index;
-			this.invert = invert;
-		}
-	}
-
 	public enum CellAccessType {
 		Path = 0,
 		Entry = 1,
 		Home = 2,
 		Spawn = 3,
 	}
-
-#if UNITY_EDITOR
-	/// <summary>
-	/// 变种编译时的单元连通信息
-	/// </summary>
-	public class CellAccessData {
-		public Int2 Location;
-		public List<Int2> Nexts;
-
-		/// <summary>
-		/// 创建新的单元连通信息
-		/// </summary>
-		/// <param name="location">当前单元位置</param>
-		/// <param name="nexts">连通单元位置</param>
-		/// <param name="nextTypes">连通单元类型</param>
-		public CellAccessData(Int2 location, List<Int2> nexts) {
-			Location = location;
-			Nexts = nexts;
-		}
-	}
-#endif
 	/// <summary>
 	/// 战斗地图模板变种
 	/// </summary>
 	[Serializable]
 	public class BattleMapAreaVariant {
-		//compiled data
+
 		[SerializeField] private List<BattleMapPath> _Paths = new List<BattleMapPath>();
 		public List<BattleMapPath> Paths { get { return _Paths; } }
 		[SerializeField] private List<Int2> _PathCells = new List<Int2>();
 		[SerializeField] private List<Int2> _PlatformCells = new List<Int2>();
 
-		/////////////////////////////
-		////    Path Function    ////
-		/////////////////////////////
-		#region [ Path Function ]
-		#endregion
-
+		//////////////////////
+		////    Editor    ///
+		////////////////////
+		#region [ Editor ]
 #if UNITY_EDITOR
 		[SerializeField] private List<Int2> _CellLocations = new List<Int2>();
 		[SerializeField] private List<BattleMapCellType> _CellTypes = new List<BattleMapCellType>();
@@ -73,8 +39,8 @@ namespace EIJ.BattleMap {
 		public bool Compiled { get { return _Compiled; } }
 
 		/////////////////////
-		////    Paint    ////
-		/////////////////////
+		////    Paint    ///
+		///////////////////
 		#region [ Paint ]
 		/// <summary>
 		/// 增加基地单元
@@ -169,8 +135,8 @@ namespace EIJ.BattleMap {
 		}
 		#endregion
 		///////////////////////
-		////    Compile    ////
-		///////////////////////
+		////    Compile    ///
+		/////////////////////
 		#region [ Compile ]
 		/// <summary>
 		/// 确认并编译变种
@@ -462,8 +428,8 @@ namespace EIJ.BattleMap {
 		}
 		#endregion
 		//////////////////////
-		////    Helper    ////
-		//////////////////////
+		////    Helper    ///
+		////////////////////
 		#region [ Helper ]
 		/// <summary>
 		/// 清空当前变种
@@ -552,44 +518,26 @@ namespace EIJ.BattleMap {
 		}
 		#endregion
 #endif
+		#endregion
 	}
-
-#if UNITY_EDITOR
-	public enum BattleMapAreaEditorProcessStep {
-		Template = 0,
-		Varients = 1,
-		Completed = 8,
-	}
-
-	public enum BattleMapAreaHolderType {
-		Normal = 0,
-		Entry = 1,
-	}
-
-	public enum VariantCellHolderType {
-		Inside = 0,
-		Wall = 1,
-		Entry = 2,
-	}
-#endif
 	/// <summary>
-	/// 战斗地图模板ScriptableObject
+	/// 战斗地图模块ScriptableObject
 	/// </summary>
-	[CreateAssetMenu(fileName = "BattleMapArea", menuName = "BattleMap/BattleMapArea", order = 550)]
+	[CreateAssetMenu(fileName = "BattleMapArea", menuName = "Battle Map/Area", order = 550)]
 	public class BattleMapArea : ScriptableObject {
-		/////////////////////////////
-		////    Template Info    ////
-		/////////////////////////////
-		#region [ Template Info ]
+
 		[SerializeField] private BattleMapAreaType _Type = BattleMapAreaType.Normal;
 		public BattleMapAreaType Type { get { return _Type; } set { _Type = value; } }
-
 		[SerializeField] private List<Int2> _Entries = new List<Int2>();
 		[SerializeField] private List<BattleMapAreaVariant> _Variants = new List<BattleMapAreaVariant>();
 		public List<BattleMapAreaVariant> Variants { get { return _Variants; } }
 		[SerializeField] private float[] _RateSplits = null;
 		public float[] RateSplitPoints { get { return _RateSplits; } }
 
+		//////////////////////
+		////    Editor    ///
+		////////////////////
+		#region [ Editor ]
 #if UNITY_EDITOR
 		[SerializeField] private string _UniqueID = string.Empty;
 		public string UniqueID { get { return _UniqueID; } }
@@ -599,8 +547,8 @@ namespace EIJ.BattleMap {
 		public bool ProcessVarients { get { return _Step == BattleMapAreaEditorProcessStep.Varients; } }
 
 		////////////////////////
-		////    Template    ////
-		////////////////////////
+		////    Template    ///
+		//////////////////////
 		#region [ Template ]
 		[SerializeField] List<Int2> _HolderLocations = new List<Int2>();
 		[SerializeField] List<BattleMapAreaHolderType> _HoldersTypes = new List<BattleMapAreaHolderType>();
@@ -657,8 +605,8 @@ namespace EIJ.BattleMap {
 		}
 		#endregion
 		///////////////////////////////////
-		////    Template -> Varients   ////
-		///////////////////////////////////
+		////    Template -> Varients   ///
+		/////////////////////////////////
 		#region [ Template -> Varients  ]
 		/// <summary>
 		/// 确认并使用模板
@@ -807,8 +755,8 @@ namespace EIJ.BattleMap {
 		}
 		#endregion
 		////////////////////////
-		////    Variants    ////
-		////////////////////////
+		////    Variants    ///
+		//////////////////////
 		#region [ Variants  ]
 		[SerializeField] List<Int2> _CellHolderLocations = new List<Int2>();
 		[SerializeField] List<VariantCellHolderType> _VariantCellHolderTypes = new List<VariantCellHolderType>();
@@ -928,8 +876,8 @@ namespace EIJ.BattleMap {
 		}
 		#endregion
 		////////////////////////////////////
-		////    Variants -> Complete    ////
-		////////////////////////////////////
+		////    Variants -> Complete    ///
+		//////////////////////////////////
 		#region [ Variants -> Complete ]
 		static readonly char[] Charactors = new char[] {
 			'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
@@ -1025,4 +973,44 @@ namespace EIJ.BattleMap {
 #endif
 		#endregion
 	}
+
+	//////////////////////
+	////    Editor    ///
+	////////////////////
+	#region [ Editor ]
+#if UNITY_EDITOR
+	/// <summary>
+	/// 变种编译时的单元连通信息
+	/// </summary>
+	public class CellAccessData {
+		public Int2 Location;
+		public List<Int2> Nexts;
+
+		/// <summary>
+		/// 创建新的单元连通信息
+		/// </summary>
+		/// <param name="location">当前单元位置</param>
+		/// <param name="nexts">连通单元位置</param>
+		/// <param name="nextTypes">连通单元类型</param>
+		public CellAccessData(Int2 location, List<Int2> nexts) {
+			Location = location;
+			Nexts = nexts;
+		}
+	}
+	public enum BattleMapAreaEditorProcessStep {
+		Template = 0,
+		Varients = 1,
+		Completed = 8,
+	}
+	public enum BattleMapAreaHolderType {
+		Normal = 0,
+		Entry = 1,
+	}
+	public enum VariantCellHolderType {
+		Inside = 0,
+		Wall = 1,
+		Entry = 2,
+	}
+#endif
+	#endregion
 }
