@@ -32,6 +32,9 @@ namespace EIJ.BattleMap {
 			PID.Color = Shader.PropertyToID("_Color");
 			PID.SrcBlend = Shader.PropertyToID("_SrcBlend");
 			PID.DstBlend = Shader.PropertyToID("_DstBlend");
+			PID.ColorIn = Shader.PropertyToID("_ColorIn");
+			PID.ColorOut = Shader.PropertyToID("_ColorOut");
+			PID.Bounds = Shader.PropertyToID("_Bounds");
 			#endregion
 		}
 
@@ -41,7 +44,7 @@ namespace EIJ.BattleMap {
 		}
 
 		private void OnGUI() {
-			if (DataOpened) TargetSerializedObject.Update();
+			if (FileOpened) TargetSerializedObject.Update();
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.BeginVertical();
 			EditorGUILayout.BeginHorizontal();
@@ -58,12 +61,12 @@ namespace EIJ.BattleMap {
 				GUILayout.Height(position.height) });
 			SetCursor(mapWindowRect);
 			DrawMapWindow(mapWindowRect);
-			if (!DataOpened) {
+			if (!FileOpened) {
 				DrawNoFileOpenText(mapWindowRect);
 			}
 			DragAddListener(mapWindowRect);
 			EditorGUILayout.EndHorizontal();
-			if (DataOpened) {
+			if (FileOpened) {
 				TargetSerializedObject.ApplyModifiedProperties();
 			}
 		}
@@ -81,10 +84,20 @@ namespace EIJ.BattleMap {
 			public static Color EditableAreaColor = new Color32(35, 35, 35, 255);
 			public static Color GridColor = new Color32(255, 255, 255, 50);
 			public static Color MaxSizeFrameColor = new Color32(0, 150, 150, 255);
-			public static Color[] RangeColor = new Color[]{
+			public static Color[] RangeColors = new Color[]{
 				new Color32(255, 140, 0, 150),
 				new Color32(255, 140, 0, 0),
 				new Color32(230, 180, 0, 255)};
+			public static Color[] AreaCellColors = new Color[] {
+				new Color32(150, 150, 150, 100), //normal
+				new Color32(180, 40, 0, 100),
+				new Color32(200, 200, 30, 100), //entry
+				new Color32(230, 130, 0, 100)
+			};
+			public static Color[] AreaOutlineColors = new Color[] {
+				new Color32(0, 100, 200, 150),
+				new Color32(200, 0, 100, 150)
+			};
 
 			public static GUIStyle NoFileOpenedTextStyle = GetNoFileOpenedTextStyle();
 		}
@@ -110,7 +123,7 @@ namespace EIJ.BattleMap {
 			if (file == null) return;
 			Opened = file;
 			TargetSerializedObject = new SerializedObject(file);
-			if (TargetSerializedObject != null) DataOpened = true;
+			if (TargetSerializedObject != null) FileOpened = true;
 			ResetTools();
 			GUI.changed = true;
 		}
@@ -120,7 +133,7 @@ namespace EIJ.BattleMap {
 			}
 			Opened = null;
 			TargetSerializedObject = null;
-			DataOpened = false;
+			FileOpened = false;
 			ResetTools();
 			GUI.changed = true;
 		}
@@ -170,7 +183,7 @@ namespace EIJ.BattleMap {
 		#region [ Object Variants ]
 		static BattleMapTemplate Opened = null;
 		static SerializedObject TargetSerializedObject = null;
-		static bool DataOpened = false;
+		static bool FileOpened = false;
 		#endregion
 		///////////////////////////////
 		////    Canvas Variants    ///
@@ -207,6 +220,9 @@ namespace EIJ.BattleMap {
 			public static int Color;
 			public static int SrcBlend;
 			public static int DstBlend;
+			public static int ColorIn;
+			public static int ColorOut;
+			public static int Bounds;
 		}
 		#endregion
 		/////////////////////////////
@@ -240,7 +256,7 @@ namespace EIJ.BattleMap {
 		/////////////////////////////
 		#region [ Drag In Control ]
 		void DragAddListener(Rect validRect) {
-			if (!DataOpened) {
+			if (!FileOpened) {
 				return;
 			}
 			Event currentEvent = Event.current;
@@ -266,10 +282,18 @@ namespace EIJ.BattleMap {
 					mousePos.x - validRect.x - validRect.width * 0.5f,
 					mousePos.y - validRect.y - validRect.height * 0.5f);
 				Vector2 canvasPos = screenOffset / validRect.width * 20f * ViewScale * new Vector2(1.0f, -1.0f) + CameraPosition;
+				Undo.RegisterCompleteObjectUndo(Opened, "Add Area");
+				Int2 targetLocation = new Int2(Mathf.FloorToInt(canvasPos.x), Mathf.FloorToInt(canvasPos.y));
+				Int2 maxEditableSizeInt = new Int2(Mathf.FloorToInt(MaxEditableSize.x), Mathf.FloorToInt(MaxEditableSize.y));
+				targetLocation.x = targetLocation.x < 0 ? 0 : targetLocation.x;
+				targetLocation.x = targetLocation.x > maxEditableSizeInt.x ? maxEditableSizeInt.x : targetLocation.x;
+				targetLocation.y = targetLocation.y < 0 ? 0 : targetLocation.y;
+				targetLocation.y = targetLocation.y > maxEditableSizeInt.y ? maxEditableSizeInt.y : targetLocation.y;
 				foreach (Object ob in objects) {
-					Opened.DragAddNewArea(ob as BattleMapArea, new Int2(Mathf.FloorToInt(canvasPos.x), Mathf.FloorToInt(canvasPos.y)));
+					Opened.DragAddNewArea(ob as BattleMapArea, targetLocation);
 				}
 				currentEvent.Use();
+				GUI.changed = true;
 			}
 		}
 		#endregion
@@ -404,6 +428,45 @@ namespace EIJ.BattleMap {
 				 Matrix4x4.Translate(new Vector3(-CameraPosition.x, -CameraPosition.y, 0));
 			GL.MultMatrix(viewMatrix);
 			#endregion
+			////////////////////////////
+			////    Draw Content    ///
+			//////////////////////////
+			#region [ Draw Content ]
+			if (FileOpened) {
+				GUIMaterial.SetInt(PID.SrcBlend, (int)BlendMode.SrcAlpha);
+				GUIMaterial.SetInt(PID.DstBlend, (int)BlendMode.OneMinusSrcAlpha);
+				GUIMaterial.SetVector(PID.Bounds, new Vector4(0, 0, Opened.TemplateSize.x, Opened.TemplateSize.y));
+				List<List<Int2>> cellLists = Opened.AreaCellLocationsCaches;
+				List<List<Int2>> entryLists = Opened.AreaEntryLocationsCaches;
+				List<List<Vector3>> outlineLists = Opened.AreaOutlineGUICaches;
+				int numArea = cellLists.Count;
+				List<Int2> cells;
+				List<Int2> entries;
+				List<Vector3> outlineVertices;
+				for (int i = 0; i < numArea; i++) {
+					cells = cellLists[i];
+					entries = entryLists[i];
+					outlineVertices = outlineLists[i];
+					/////////////////////
+					////    Cells    ///
+					///////////////////
+					#region [ Cells ]
+					GUIMaterial.SetColor(PID.ColorIn, Styles.AreaCellColors[0]);
+					GUIMaterial.SetColor(PID.ColorOut, Styles.AreaCellColors[1]);
+					GUIMaterial.SetPass(1);
+					GL.Begin(GL.QUADS);
+					GL.Color(Color.white);
+					foreach (Int2 cell in cells) {
+						GL.Vertex3(cell.x, cell.y, 0f);
+						GL.Vertex3(cell.x, cell.y + 1, 0f);
+						GL.Vertex3(cell.x + 1, cell.y + 1, 0f);
+						GL.Vertex3(cell.x + 1, cell.y, 0f);
+					}
+					GL.End();
+					#endregion
+				}
+			}
+			#endregion
 			/////////////////////////
 			////    Draw Grid    ///
 			///////////////////////
@@ -468,8 +531,8 @@ namespace EIJ.BattleMap {
 			////    Draw Range    ///
 			////////////////////////
 			#region [ Draw Range ]
-			if (DataOpened) {
-				Int4 range = Opened.TemplateRange;
+			if (FileOpened) {
+				Vector2 size = new Vector2(Opened.TemplateSize.x, Opened.TemplateSize.y);
 				GUIMaterial.SetInt(PID.SrcBlend, (int)BlendMode.SrcAlpha);
 				GUIMaterial.SetInt(PID.DstBlend, (int)BlendMode.OneMinusSrcAlpha);
 				GUIMaterial.SetPass(0);
@@ -479,39 +542,39 @@ namespace EIJ.BattleMap {
 				#region [ Edges ]
 				//left
 				GL.Begin(GL.TRIANGLE_STRIP);
-				GL.Color(Styles.RangeColor[0]);
-				GL.Vertex3(range.x, range.y, 0f);
-				GL.Vertex3(range.x, range.w, 0f);
-				GL.Color(Styles.RangeColor[1]);
-				GL.Vertex3(range.x - 1, range.y, 0f);
-				GL.Vertex3(range.x - 1, range.w, 0f);
+				GL.Color(Styles.RangeColors[0]);
+				GL.Vertex3(0f, 0f, 0f);
+				GL.Vertex3(0f, size.y, 0f);
+				GL.Color(Styles.RangeColors[1]);
+				GL.Vertex3(-1f, 0f, 0f);
+				GL.Vertex3(-1f, size.y, 0f);
 				GL.End();
 				//right
 				GL.Begin(GL.TRIANGLE_STRIP);
-				GL.Color(Styles.RangeColor[0]);
-				GL.Vertex3(range.z, range.y, 0f);
-				GL.Vertex3(range.z, range.w, 0f);
-				GL.Color(Styles.RangeColor[1]);
-				GL.Vertex3(range.z + 1, range.y, 0f);
-				GL.Vertex3(range.z + 1, range.w, 0f);
+				GL.Color(Styles.RangeColors[0]);
+				GL.Vertex3(size.x, 0f, 0f);
+				GL.Vertex3(size.x, size.y, 0f);
+				GL.Color(Styles.RangeColors[1]);
+				GL.Vertex3(size.x + 1, 0f, 0f);
+				GL.Vertex3(size.x + 1, size.y, 0f);
 				GL.End();
 				//bottom
 				GL.Begin(GL.TRIANGLE_STRIP);
-				GL.Color(Styles.RangeColor[0]);
-				GL.Vertex3(range.x, range.y, 0f);
-				GL.Vertex3(range.z, range.y, 0f);
-				GL.Color(Styles.RangeColor[1]);
-				GL.Vertex3(range.x, range.y - 1, 0f);
-				GL.Vertex3(range.z, range.y - 1, 0f);
+				GL.Color(Styles.RangeColors[0]);
+				GL.Vertex3(0f, 0f, 0f);
+				GL.Vertex3(size.x, 0f, 0f);
+				GL.Color(Styles.RangeColors[1]);
+				GL.Vertex3(0f, -1f, 0f);
+				GL.Vertex3(size.x, -1f, 0f);
 				GL.End();
-				//bottom
+				//top
 				GL.Begin(GL.TRIANGLE_STRIP);
-				GL.Color(Styles.RangeColor[0]);
-				GL.Vertex3(range.x, range.w, 0f);
-				GL.Vertex3(range.z, range.w, 0f);
-				GL.Color(Styles.RangeColor[1]);
-				GL.Vertex3(range.x, range.w + 1, 0f);
-				GL.Vertex3(range.z, range.w + 1, 0f);
+				GL.Color(Styles.RangeColors[0]);
+				GL.Vertex3(0f, size.y, 0f);
+				GL.Vertex3(size.x, size.y, 0f);
+				GL.Color(Styles.RangeColors[1]);
+				GL.Vertex3(0f, size.y + 1f, 0f);
+				GL.Vertex3(size.x, size.y + 1f, 0f);
 				GL.End();
 				#endregion
 				///////////////////////
@@ -520,10 +583,10 @@ namespace EIJ.BattleMap {
 				#region [ Corners ]
 				Vector2 currentCenter;
 				Vector2[] centerOffsets = new Vector2[4];
-				centerOffsets[0] = new Vector2(range.z, range.w);
-				centerOffsets[1] = new Vector2(range.z, range.y);
-				centerOffsets[2] = new Vector2(range.x, range.y);
-				centerOffsets[3] = new Vector2(range.x, range.w);
+				centerOffsets[0] = new Vector2(size.x, size.y);
+				centerOffsets[1] = new Vector2(size.x, 0f);
+				centerOffsets[2] = new Vector2(0f, 0f);
+				centerOffsets[3] = new Vector2(0f, size.y);
 				int numPerCornerTris = CircleSubdivision / 4;
 				int circlePointIndex0, circlePointIndex1;
 				GL.Begin(GL.TRIANGLES);
@@ -535,9 +598,9 @@ namespace EIJ.BattleMap {
 						if (circlePointIndex1 >= CircleSubdivision) {
 							circlePointIndex1 = 0;
 						}
-						GL.Color(Styles.RangeColor[0]);
+						GL.Color(Styles.RangeColors[0]);
 						GL.Vertex3(currentCenter.x, currentCenter.y, 0f);
-						GL.Color(Styles.RangeColor[1]);
+						GL.Color(Styles.RangeColors[1]);
 						GL.Vertex3(currentCenter.x + CirclePoints[circlePointIndex0].x, currentCenter.y + CirclePoints[circlePointIndex0].y, 0f);
 						GL.Vertex3(currentCenter.x + CirclePoints[circlePointIndex1].x, currentCenter.y + CirclePoints[circlePointIndex1].y, 0f);
 					}
@@ -546,15 +609,13 @@ namespace EIJ.BattleMap {
 				#endregion
 				//frame
 				GL.Begin(GL.LINE_STRIP);
-				GL.Color(Styles.RangeColor[2]);
-				GL.Vertex3(range.x, range.y, 0f);
-				GL.Vertex3(range.x, range.w, 0f);
-				GL.Vertex3(range.z, range.w, 0f);
-				GL.Vertex3(range.z, range.y, 0f);
-				GL.Vertex3(range.x, range.y, 0f);
+				GL.Color(Styles.RangeColors[2]);
+				GL.Vertex3(0f, 0f, 0f);
+				GL.Vertex3(0f, size.y, 0f);
+				GL.Vertex3(size.x, size.y, 0f);
+				GL.Vertex3(size.x, 0f, 0f);
+				GL.Vertex3(0f, 0f, 0f);
 				GL.End();
-
-				//number
 			}
 			#endregion
 			GL.PopMatrix();

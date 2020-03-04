@@ -759,7 +759,9 @@ namespace EIJ.BattleMap {
 		//////////////////////
 		#region [ Variants  ]
 		[SerializeField] List<Int2> _CellHolderLocations = new List<Int2>();
+		public List<Int2> CellHolderLocations { get { return _CellHolderLocations; } }
 		[SerializeField] List<VariantCellHolderType> _VariantCellHolderTypes = new List<VariantCellHolderType>();
+		public List<VariantCellHolderType> VariantCellHolderTypes { get { return _VariantCellHolderTypes; } }
 		[SerializeField] int _VariantEditingIndex = -1;
 		public int EditingVariant { get { return _VariantEditingIndex; } set { _VariantEditingIndex = value; } }
 		/// <summary>

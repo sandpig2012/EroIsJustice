@@ -12,11 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9cc3f0cd2587f948a4bed33c840fafc, type: 3}
   m_Name: BattleMapTemplate
   m_EditorClassIdentifier: 
-  _TemplateRange:
-    x: 0
-    y: 0
-    z: 40
-    w: 40
+  _TemplateSize:
+    x: 40
+    y: 40
   _Areas: []
   _AreaLocations: []
   _AreaRotations: 

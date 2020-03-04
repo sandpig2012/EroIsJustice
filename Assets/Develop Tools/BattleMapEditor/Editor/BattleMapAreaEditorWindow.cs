@@ -42,7 +42,7 @@ namespace EIJ.BattleMap {
 			Undo.undoRedoPerformed -= Repaint;
 		}
 		private void OnGUI() {
-			if (DataOpened) TargetSerializedObject.Update();
+			if (FileOpened) TargetSerializedObject.Update();
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.BeginVertical();
 			EditorGUILayout.BeginHorizontal();
@@ -53,7 +53,7 @@ namespace EIJ.BattleMap {
 			EditorGUILayout.ObjectField(Opened, typeof(BattleMapArea), false);
 			EditorGUI.EndDisabledGroup();
 			GuiLine();
-			if (DataOpened) {
+			if (FileOpened) {
 				EditorGUILayout.BeginHorizontal();
 				EditorGUILayout.LabelField("类型:", EditorStyles.boldLabel, GUILayout.Width(50));
 				if (Opened.ProcessTemplate) {
@@ -80,11 +80,11 @@ namespace EIJ.BattleMap {
 				GUILayout.Height(position.height) });
 			SetCursor(mapWindowRect);
 			DrawMapWindow(mapWindowRect);
-			if (!DataOpened) {
+			if (!FileOpened) {
 				DrawNoFileOpenText(mapWindowRect);
 			}
 			EditorGUILayout.EndHorizontal();
-			if (DataOpened) {
+			if (FileOpened) {
 				TargetSerializedObject.ApplyModifiedProperties();
 			}
 		}
@@ -114,8 +114,8 @@ namespace EIJ.BattleMap {
 				new Color32(30, 230, 30, 255),
 				new Color32(200, 30, 30, 255)};
 			public static Color[] OutlineColors = new Color[]{
-				new Color32(170, 15, 0, 255),
-				new Color32(0, 170, 10, 255)};
+				new Color32(140, 15, 0, 255),
+				new Color32(100, 170, 50, 255)};
 
 			public static GUIStyle DefaultButtonStyle = new GUIStyle(GUI.skin.button);
 			public static GUIStyle CurrentToolButtonStyle = GetCurrentToolButtonStyle();
@@ -210,7 +210,7 @@ namespace EIJ.BattleMap {
 			if (file == null) return;
 			Opened = file;
 			TargetSerializedObject = new SerializedObject(file);
-			if (TargetSerializedObject != null) DataOpened = true;
+			if (TargetSerializedObject != null) FileOpened = true;
 			ResetTools();
 			GUI.changed = true;
 		}
@@ -221,7 +221,7 @@ namespace EIJ.BattleMap {
 			}
 			Opened = null;
 			TargetSerializedObject = null;
-			DataOpened = false;
+			FileOpened = false;
 			ResetTools();
 			GUI.changed = true;
 		}
@@ -272,7 +272,7 @@ namespace EIJ.BattleMap {
 		#region [ Object Variants ]
 		static BattleMapArea Opened = null;
 		static SerializedObject TargetSerializedObject = null;
-		static bool DataOpened = false;
+		static bool FileOpened = false;
 		#endregion
 		/////////////////////////////
 		////    Tool Variants    ///
@@ -357,7 +357,7 @@ namespace EIJ.BattleMap {
 		///////////////////////////
 		#region [ Tool Function ]
 		void EditPaint(Vector2 canvasPosition, Action action) {
-			if (!DataOpened) return;
+			if (!FileOpened) return;
 			Int2 location = new Int2(Mathf.FloorToInt(canvasPosition.x), Mathf.FloorToInt(canvasPosition.y));
 			if (Opened.ProcessTemplate) {
 				if (action == Action.Painting) {
@@ -378,7 +378,7 @@ namespace EIJ.BattleMap {
 		}
 
 		void SwitchTool() {
-			if (!DataOpened) return;
+			if (!FileOpened) return;
 			if (Opened.ProcessCompleted) return;
 			if (focusedWindow == this && CurrentAction == Action.None) {
 				Event currentEvent = Event.current;
@@ -571,7 +571,7 @@ namespace EIJ.BattleMap {
 		void DrawVariantsMenu() {
 			GuiLine();
 			EditorGUILayout.LabelField("[ 变种 ]", EditorStyles.boldLabel, GUILayout.Width(100));
-			if (DataOpened) {
+			if (FileOpened) {
 				EditorGUILayout.BeginHorizontal();
 				if (GUILayout.Button("清空", GUILayout.Width(45))) {
 					if (EditorUtility.DisplayDialog("'o'!", "将移除所有变种！", "确定", "取消")) {
@@ -595,7 +595,7 @@ namespace EIJ.BattleMap {
 		///////////////////////////////
 		#region [ Draw Variants List]
 		void DrawVariantsList() {
-			if (!DataOpened) return;
+			if (!FileOpened) return;
 			int count = Opened.Variants.Count;
 			EditorGUI.BeginDisabledGroup(!Opened.ProcessVarients);
 			if (count == 0)
@@ -846,7 +846,7 @@ namespace EIJ.BattleMap {
 			////    Draw Content    ///
 			//////////////////////////
 			#region [ Draw Content ]
-			if (DataOpened) {
+			if (FileOpened) {
 				int cellCount = 0;
 				Int2[] locations;
 				if (Opened.ProcessTemplate) {
