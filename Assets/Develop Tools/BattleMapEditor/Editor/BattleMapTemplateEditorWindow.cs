@@ -44,7 +44,14 @@ namespace EIJ.BattleMap {
 		}
 
 		private void OnGUI() {
-			if (FileOpened) TargetSerializedObject.Update();
+			if (FileOpened) {
+				if (Opened == null) {
+					CloseFile();
+				}
+				else {
+					TargetSerializedObject.Update();
+				}
+			}
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.BeginVertical();
 			EditorGUILayout.BeginHorizontal();
@@ -64,7 +71,6 @@ namespace EIJ.BattleMap {
 			if (!FileOpened) {
 				DrawNoFileOpenText(mapWindowRect);
 			}
-			DragAddListener(mapWindowRect);
 			EditorGUILayout.EndHorizontal();
 			if (FileOpened) {
 				TargetSerializedObject.ApplyModifiedProperties();
@@ -89,14 +95,19 @@ namespace EIJ.BattleMap {
 				new Color32(255, 140, 0, 0),
 				new Color32(230, 180, 0, 255)};
 			public static Color[] AreaCellColors = new Color[] {
-				new Color32(150, 150, 150, 100), //normal
-				new Color32(180, 40, 0, 100),
-				new Color32(200, 200, 30, 100), //entry
-				new Color32(230, 130, 0, 100)
+				new Color32(230, 230, 230, 100), //normal
+				new Color32(220, 40, 0, 100),
+				new Color32(240, 230, 110, 255), //entry
+				new Color32(230, 130, 0, 255)
 			};
 			public static Color[] AreaOutlineColors = new Color[] {
-				new Color32(0, 100, 200, 150),
-				new Color32(200, 0, 100, 150)
+				new Color32(50, 255, 255, 200),
+				new Color32(230, 0, 150, 200)
+			};
+			public static Color OverlapColor = new Color32(200, 0, 0, 150);
+			public static Color[] DragInColors = new Color[] {
+				new Color32(20, 200, 20, 150),
+				new Color32(140, 200, 20, 150),
 			};
 
 			public static GUIStyle NoFileOpenedTextStyle = GetNoFileOpenedTextStyle();
@@ -125,14 +136,18 @@ namespace EIJ.BattleMap {
 			TargetSerializedObject = new SerializedObject(file);
 			if (TargetSerializedObject != null) FileOpened = true;
 			ResetTools();
+			EditorUtility.SetDirty(Opened);
 			GUI.changed = true;
 		}
 		static void CloseFile() {
 			if (Opened != null) {
 				Undo.ClearUndo(Opened);
+				EditorUtility.SetDirty(Opened);
 			}
 			Opened = null;
 			TargetSerializedObject = null;
+			DragInArea = null;
+			DragInTarget = Int2.Zero;
 			FileOpened = false;
 			ResetTools();
 			GUI.changed = true;
@@ -199,6 +214,10 @@ namespace EIJ.BattleMap {
 		Vector2 RecordCameraPosition = Vector2.zero;
 		Material GUIMaterial = null;
 
+		//Drag In
+		static BattleMapArea DragInArea = null;
+		static Int2 DragInTarget = Int2.Zero;
+
 		//circle point position
 		const int CircleSubdivision = 32;
 		static Vector2[] CirclePoints = GetCirclePoints(CircleSubdivision);
@@ -251,52 +270,6 @@ namespace EIJ.BattleMap {
 		void SetCursor(Rect rect) {
 		}
 		#endregion
-		///////////////////////////////
-		////    Drag In Control    ///
-		/////////////////////////////
-		#region [ Drag In Control ]
-		void DragAddListener(Rect validRect) {
-			if (!FileOpened) {
-				return;
-			}
-			Event currentEvent = Event.current;
-			if (currentEvent.type == EventType.DragUpdated && validRect.Contains(currentEvent.mousePosition)) {
-				Object[] objects = DragAndDrop.objectReferences;
-				foreach (Object ob in objects) {
-					if (ob.GetType() != typeof(BattleMapArea)) {
-						return;
-					}
-				}
-				DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
-				currentEvent.Use();
-			}
-			else if (currentEvent.type == EventType.DragExited && validRect.Contains(currentEvent.mousePosition)) {
-				Object[] objects = DragAndDrop.objectReferences;
-				foreach (Object ob in objects) {
-					if (ob.GetType() != typeof(BattleMapArea)) {
-						return;
-					}
-				}
-				Vector2 mousePos = currentEvent.mousePosition;
-				Vector2 screenOffset = new Vector2(
-					mousePos.x - validRect.x - validRect.width * 0.5f,
-					mousePos.y - validRect.y - validRect.height * 0.5f);
-				Vector2 canvasPos = screenOffset / validRect.width * 20f * ViewScale * new Vector2(1.0f, -1.0f) + CameraPosition;
-				Undo.RegisterCompleteObjectUndo(Opened, "Add Area");
-				Int2 targetLocation = new Int2(Mathf.FloorToInt(canvasPos.x), Mathf.FloorToInt(canvasPos.y));
-				Int2 maxEditableSizeInt = new Int2(Mathf.FloorToInt(MaxEditableSize.x), Mathf.FloorToInt(MaxEditableSize.y));
-				targetLocation.x = targetLocation.x < 0 ? 0 : targetLocation.x;
-				targetLocation.x = targetLocation.x > maxEditableSizeInt.x ? maxEditableSizeInt.x : targetLocation.x;
-				targetLocation.y = targetLocation.y < 0 ? 0 : targetLocation.y;
-				targetLocation.y = targetLocation.y > maxEditableSizeInt.y ? maxEditableSizeInt.y : targetLocation.y;
-				foreach (Object ob in objects) {
-					Opened.DragAddNewArea(ob as BattleMapArea, targetLocation);
-				}
-				currentEvent.Use();
-				GUI.changed = true;
-			}
-		}
-		#endregion
 		//------------------------------------------------------------------------//
 
 		//------------------------------- Draw GUI -------------------------------//
@@ -308,6 +281,74 @@ namespace EIJ.BattleMap {
 			Event currentEvent = Event.current;
 			int controlID = GUIUtility.GetControlID(DrawMapWindowHash, FocusType.Passive, rect);
 			switch (currentEvent.GetTypeForControl(controlID)) {
+			///////////////////////////////
+			////    Drag In Control    ///
+			/////////////////////////////
+			#region [ Drag In Control ]
+			case EventType.DragUpdated:
+				if (FileOpened) {
+					if (rect.Contains(currentEvent.mousePosition)) {
+						Object[] objects = DragAndDrop.objectReferences;
+						if (objects.Length > 1) {
+							return;
+						}
+						if (objects[0].GetType() != typeof(BattleMapArea)) {
+							return;
+						}
+						GUI.changed = true;
+						Vector2 mousePos = currentEvent.mousePosition;
+						Vector2 screenOffset = new Vector2(
+							mousePos.x - rect.x - rect.width * 0.5f,
+							mousePos.y - rect.y - rect.height * 0.5f);
+						Vector2 canvasPos = screenOffset / rect.width * 20f * ViewScale * new Vector2(1.0f, -1.0f) + CameraPosition;
+						Int2 targetLocation = new Int2(Mathf.FloorToInt(canvasPos.x), Mathf.FloorToInt(canvasPos.y));
+						Int2 maxEditableSizeInt = new Int2(Mathf.FloorToInt(MaxEditableSize.x), Mathf.FloorToInt(MaxEditableSize.y));
+						targetLocation.x = targetLocation.x < 0 ? 0 : targetLocation.x;
+						targetLocation.x = targetLocation.x > maxEditableSizeInt.x ? maxEditableSizeInt.x : targetLocation.x;
+						targetLocation.y = targetLocation.y < 0 ? 0 : targetLocation.y;
+						targetLocation.y = targetLocation.y > maxEditableSizeInt.y ? maxEditableSizeInt.y : targetLocation.y;
+						DragInTarget = targetLocation;
+						DragInArea = objects[0] as BattleMapArea;
+						DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
+						GUIUtility.hotControl = controlID;
+						currentEvent.Use();
+					}
+					else {
+						GUIUtility.hotControl = 0;
+						DragInArea = null;
+					}
+				}
+				break;
+			case EventType.DragPerform:
+				if (FileOpened && rect.Contains(currentEvent.mousePosition) && GUIUtility.hotControl == controlID) {
+					Object[] objects = DragAndDrop.objectReferences;
+					if (objects.Length > 1) {
+						return;
+					}
+					if (objects[0].GetType() != typeof(BattleMapArea)) {
+						return;
+					}
+					GUI.changed = true;
+					Vector2 mousePos = currentEvent.mousePosition;
+					Vector2 screenOffset = new Vector2(
+						mousePos.x - rect.x - rect.width * 0.5f,
+						mousePos.y - rect.y - rect.height * 0.5f);
+					Vector2 canvasPos = screenOffset / rect.width * 20f * ViewScale * new Vector2(1.0f, -1.0f) + CameraPosition;
+					Int2 targetLocation = new Int2(Mathf.FloorToInt(canvasPos.x), Mathf.FloorToInt(canvasPos.y));
+					Int2 maxEditableSizeInt = new Int2(Mathf.FloorToInt(MaxEditableSize.x), Mathf.FloorToInt(MaxEditableSize.y));
+					targetLocation.x = targetLocation.x < 0 ? 0 : targetLocation.x;
+					targetLocation.x = targetLocation.x > maxEditableSizeInt.x ? maxEditableSizeInt.x : targetLocation.x;
+					targetLocation.y = targetLocation.y < 0 ? 0 : targetLocation.y;
+					targetLocation.y = targetLocation.y > maxEditableSizeInt.y ? maxEditableSizeInt.y : targetLocation.y;
+					DragAndDrop.AcceptDrag();
+					Undo.RegisterCompleteObjectUndo(Opened, "Add Area");
+					Opened.DragAddNewArea(objects[0] as BattleMapArea, targetLocation);
+					GUIUtility.hotControl = 0;
+					currentEvent.Use();
+					DragInArea = null;
+				}
+				break;
+			#endregion
 			///////////////////////
 			////    Control    ///
 			/////////////////////
@@ -428,6 +469,21 @@ namespace EIJ.BattleMap {
 				 Matrix4x4.Translate(new Vector3(-CameraPosition.x, -CameraPosition.y, 0));
 			GL.MultMatrix(viewMatrix);
 			#endregion
+			/////////////////////////////
+			////    Editable Area    ///
+			///////////////////////////
+			#region [ Editable Area ]
+			GUIMaterial.SetInt(PID.SrcBlend, (int)BlendMode.One);
+			GUIMaterial.SetInt(PID.DstBlend, (int)BlendMode.Zero);
+			GUIMaterial.SetPass(0);
+			GL.Begin(GL.TRIANGLE_STRIP);
+			GL.Color(Styles.EditableAreaColor);
+			GL.Vertex3(MaxEditableSize.x, 0, 0);
+			GL.Vertex3(0, 0, 0);
+			GL.Vertex3(MaxEditableSize.x, MaxEditableSize.y, 0);
+			GL.Vertex3(0, MaxEditableSize.y, 0);
+			GL.End();
+			#endregion
 			////////////////////////////
 			////    Draw Content    ///
 			//////////////////////////
@@ -436,17 +492,17 @@ namespace EIJ.BattleMap {
 				GUIMaterial.SetInt(PID.SrcBlend, (int)BlendMode.SrcAlpha);
 				GUIMaterial.SetInt(PID.DstBlend, (int)BlendMode.OneMinusSrcAlpha);
 				GUIMaterial.SetVector(PID.Bounds, new Vector4(0, 0, Opened.TemplateSize.x, Opened.TemplateSize.y));
-				List<List<Int2>> cellLists = Opened.AreaCellLocationsCaches;
-				List<List<Int2>> entryLists = Opened.AreaEntryLocationsCaches;
-				List<List<Vector3>> outlineLists = Opened.AreaOutlineGUICaches;
-				int numArea = cellLists.Count;
+				List<TemplateAreaEditorCache> areaEditorCaches = Opened.AreaEditorCaches;
+				int numArea = areaEditorCaches.Count;
 				List<Int2> cells;
 				List<Int2> entries;
 				List<Vector3> outlineVertices;
+				TemplateAreaEditorCache currentCache;
 				for (int i = 0; i < numArea; i++) {
-					cells = cellLists[i];
-					entries = entryLists[i];
-					outlineVertices = outlineLists[i];
+					currentCache = areaEditorCaches[i];
+					cells = currentCache.AreaCellLocationsCache;
+					entries = currentCache.AreaEntryLocationsCache;
+					outlineVertices = currentCache.AreaOutlineGUICache;
 					/////////////////////
 					////    Cells    ///
 					///////////////////
@@ -464,21 +520,105 @@ namespace EIJ.BattleMap {
 					}
 					GL.End();
 					#endregion
+					///////////////////////
+					////    Entries    ///
+					/////////////////////
+					#region [ Entries ]
+					GUIMaterial.SetColor(PID.ColorIn, Styles.AreaCellColors[2]);
+					GUIMaterial.SetColor(PID.ColorOut, Styles.AreaCellColors[3]);
+					GUIMaterial.SetPass(1);
+					GL.Begin(GL.QUADS);
+					GL.Color(Color.white);
+					foreach (Int2 entry in entries) {
+						GL.Vertex3(entry.x, entry.y, 0f);
+						GL.Vertex3(entry.x, entry.y + 1, 0f);
+						GL.Vertex3(entry.x + 1, entry.y + 1, 0f);
+						GL.Vertex3(entry.x + 1, entry.y, 0f);
+					}
+					GL.End();
+					#endregion
+					////////////////////////
+					////    Outlines    ///
+					//////////////////////
+					#region [ Outlines ]
+					GUIMaterial.SetColor(PID.ColorIn, Styles.AreaOutlineColors[0]);
+					GUIMaterial.SetColor(PID.ColorOut, Styles.AreaOutlineColors[1]);
+					GUIMaterial.SetPass(1);
+					GL.Begin(GL.QUADS);
+					for (int j = 0; j < outlineVertices.Count; j += 4) {
+						GL.Color(Color.white);
+						GL.Vertex(outlineVertices[j]);
+						GL.Vertex(outlineVertices[j + 1]);
+						GL.Color(Color.clear);
+						GL.Vertex(outlineVertices[j + 2]);
+						GL.Vertex(outlineVertices[j + 3]);
+					}
+					GL.End();
+					#endregion
 				}
+				///////////////////////
+				////    Overlap    ///
+				/////////////////////
+				#region [ Overlap ]
+				GUIMaterial.SetPass(0);
+				GL.Begin(GL.QUADS);
+				GL.Color(Styles.OverlapColor);
+				int[] overlapCache = Opened.OverlapCache;
+				int currentOverlapCacheIndex;
+				for (int y = 0; y < Opened.TemplateSize.y; y++) {
+					for (int x = 0; x < Opened.TemplateSize.x; x++) {
+						currentOverlapCacheIndex = x + y * 100;
+						if (overlapCache[currentOverlapCacheIndex] > 1) {
+							GL.Vertex3(x + 0.3f, y + 0.3f, 0f);
+							GL.Vertex3(x + 0.7f, y + 0.3f, 0f);
+							GL.Vertex3(x + 0.7f, y + 0.7f, 0f);
+							GL.Vertex3(x + 0.3f, y + 0.7f, 0f);
+						}
+					}
+				}
+				GL.End();
+				#endregion
+				///////////////////////
+				////    Drag In    ///
+				/////////////////////
+				#region [ Drag In ]
+				if (DragInArea != null) {
+					GUIMaterial.SetPass(0);
+					GL.Begin(GL.QUADS);
+					GL.Color(Styles.DragInColors[0]);
+					if (DragInArea.UniqueID.Length <= 0) {
+						GL.Vertex3(DragInTarget.x - 1, DragInTarget.y - 1, 0f);
+						GL.Vertex3(DragInTarget.x + 1, DragInTarget.y - 1, 0f);
+						GL.Vertex3(DragInTarget.x + 1, DragInTarget.y + 1, 0f);
+						GL.Vertex3(DragInTarget.x - 1, DragInTarget.y + 1, 0f);
+					}
+					else {
+						foreach (Int2 cell in DragInArea.CellHolderLocations) {
+							GL.Vertex3(DragInTarget.x + cell.x, DragInTarget.y + cell.y, 0f);
+							GL.Vertex3(DragInTarget.x + cell.x + 1, DragInTarget.y + cell.y, 0f);
+							GL.Vertex3(DragInTarget.x + cell.x + 1, DragInTarget.y + cell.y + 1, 0f);
+							GL.Vertex3(DragInTarget.x + cell.x, DragInTarget.y + cell.y + 1, 0f);
+						}
+						GL.Color(Styles.DragInColors[1]);
+						for (int i = 0; i < DragInArea.CellHolderLocations.Count; i++) {
+							if (DragInArea.VariantCellHolderTypes[i] == VariantCellHolderType.Entry) {
+								Int2 currentLocation = DragInArea.CellHolderLocations[i] + DragInTarget;
+								GL.Vertex3(currentLocation.x, currentLocation.y, 0f);
+								GL.Vertex3(currentLocation.x + 1, currentLocation.y, 0f);
+								GL.Vertex3(currentLocation.x + 1, currentLocation.y + 1, 0f);
+								GL.Vertex3(currentLocation.x, currentLocation.y + 1, 0f);
+							}
+						}
+					}
+					GL.End();
+				}
+				#endregion
 			}
 			#endregion
 			/////////////////////////
 			////    Draw Grid    ///
 			///////////////////////
 			#region [ Draw Grid ]
-			//editable area
-			GL.Begin(GL.TRIANGLE_STRIP);
-			GL.Color(Styles.EditableAreaColor);
-			GL.Vertex3(MaxEditableSize.x, 0, 0);
-			GL.Vertex3(0, 0, 0);
-			GL.Vertex3(MaxEditableSize.x, MaxEditableSize.y, 0);
-			GL.Vertex3(0, MaxEditableSize.y, 0);
-			GL.End();
 			//grid
 			Color gridFadeColor = Styles.GridColor;
 			gridFadeColor.a *= 0.5f;
@@ -505,7 +645,7 @@ namespace EIJ.BattleMap {
 				if (locInt < 0 || locInt > Mathf.RoundToInt(MaxEditableSize.y)) {
 					continue;
 				}
-				GL.Color(((locInt / 10) * 10) == locInt ? Styles.GridColor : gridFadeColor);
+				GL.Color((locInt / 10 * 10) == locInt ? Styles.GridColor : gridFadeColor);
 				GL.Vertex3(Mathf.Clamp(visibleArea.x + CameraPosition.x, 0f, MaxEditableSize.x), loc, 0f);
 				GL.Vertex3(Mathf.Clamp(-visibleArea.x + CameraPosition.x, 0f, MaxEditableSize.x), loc, 0f);
 			}

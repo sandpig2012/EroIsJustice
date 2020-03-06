@@ -97,11 +97,13 @@
 
             half4 frag (v2f i) : SV_Target
             {
-                half4 colorIn = _ColorIn * i.color.a;
-                half4 colorOut = _ColorOut * i.color.a;
-                half4 inOrOut = half4(_Bounds.xy - i.location, i.location - _Bounds.zw);
-                inOrOut = saturate(sign(inOrOut)); //1: out 0: in;
-                half4 finalColor = lerp(colorIn, colorOut, inOrOut);
+                half4 colorIn = _ColorIn;
+                colorIn.a *= i.color.a;
+                half4 colorOut = _ColorOut;
+                colorOut.a *= i.color.a;
+                half4 inOrOut = half4(i.location - _Bounds.xy, _Bounds.zw - i.location);
+                inOrOut = saturate(sign(inOrOut)); //1: in 0: out;
+                half4 finalColor = lerp(colorOut, colorIn, inOrOut.x * inOrOut.y * inOrOut.z * inOrOut.w);
                 return finalColor;
             }
             ENDCG

@@ -14,7 +14,7 @@ namespace EIJ.BattleMap {
 		public List<Int2> AreaEntryLocationsCache { get { return _AreaEntryLocationsCache; } }
 		[SerializeField] private List<Vector3> _AreaOutlineGUICache = new List<Vector3>();
 		public List<Vector3> AreaOutlineGUICache { get { return _AreaOutlineGUICache; } }
-		
+
 		public TemplateAreaEditorCache(List<Int2> areaCellLocationsCache, List<Int2> areaEntryLocationsCache, List<Vector3> areaOutlineGUICache) {
 			_AreaCellLocationsCache = areaCellLocationsCache;
 			_AreaEntryLocationsCache = areaEntryLocationsCache;
@@ -29,6 +29,8 @@ namespace EIJ.BattleMap {
 	/// </summary>
 	[CreateAssetMenu(fileName = "BattleMapTemplate", menuName = "Battle Map/Template", order = 551)]
 	public class BattleMapTemplate : ScriptableObject {
+		[SerializeField] private int[] _OverlapCache = new int[10000]; //100 x 100
+		public int[] OverlapCache { get { return _OverlapCache; } }
 		[SerializeField] private Int2 _TemplateSize = new Int2(40, 40); //min_x, min_y, max_x, max_y
 		public Int2 TemplateSize { get { return _TemplateSize; } }
 		[SerializeField] private List<BattleMapArea> _Areas = new List<BattleMapArea>();
@@ -38,13 +40,14 @@ namespace EIJ.BattleMap {
 		[SerializeField] private List<AreaRotation> _AreaRotations = new List<AreaRotation>();
 		public List<AreaRotation> AreaRotations { get { return _AreaRotations; } }
 
+		//////////////////////
+		////    Editor    ///
+		////////////////////
+		#region [ Editor ]
 #if UNITY_EDITOR
-		[SerializeField] private List<List<Int2>> _AreaCellLocationsCaches = new List<List<Int2>>();
-		public List<List<Int2>> AreaCellLocationsCaches { get { return _AreaCellLocationsCaches; } }
-		[SerializeField] private List<List<Int2>> _AreaEntryLocationsCaches = new List<List<Int2>>();
-		public List<List<Int2>> AreaEntryLocationsCaches { get { return _AreaEntryLocationsCaches; } }
-		[SerializeField] private List<List<Vector3>> _AreaOutlineGUICaches = new List<List<Vector3>>();
-		public List<List<Vector3>> AreaOutlineGUICaches { get { return _AreaOutlineGUICaches; } }
+
+		[SerializeField] private List<TemplateAreaEditorCache> _AreaEditorCaches = new List<TemplateAreaEditorCache>();
+		public List<TemplateAreaEditorCache> AreaEditorCaches { get { return _AreaEditorCaches; } }
 		[SerializeField] private List<Int4> _AreaBounds = new List<Int4>(); //x, y, width, height
 		[SerializeField] private List<string> _UniqueIDs = new List<string>();
 		const float GUIOutlineThickness = 0.3f;
@@ -71,13 +74,13 @@ namespace EIJ.BattleMap {
 			string uniqueID = battleMapArea.UniqueID;
 			if (uniqueID.Length <= 0) { //not completed
 				_UniqueIDs.Add(string.Empty);
-				_AreaCellLocationsCaches.Add(new List<Int2>() {
+				List<Int2> areaCellLocationsCache = new List<Int2>() {
 					new Int2(0, 0) + location,
 					new Int2(-1, 0) + location,
 					new Int2(-1, -1) + location,
 					new Int2(0, -1) + location
-				});
-				_AreaEntryLocationsCaches.Add(new List<Int2>());
+				};
+				List<Int2> areaEntryLocationsCache = new List<Int2>();
 				_AreaBounds.Add(new Int4(location.x - 1, location.y - 1, 2, 2));
 				List<Vector3> areaOutlineGUICaches = new List<Vector3>();
 				///////////////////////////
@@ -87,25 +90,29 @@ namespace EIJ.BattleMap {
 				//left
 				areaOutlineGUICaches.Add(new Vector3(location.x - 1, location.y + 1, 0f));
 				areaOutlineGUICaches.Add(new Vector3(location.x - 1, location.y - 1, 0f));
-				areaOutlineGUICaches.Add(new Vector3(location.x - 1 + GUIOutlineThickness, location.y + 1 - GUIOutlineThickness, 0f));
 				areaOutlineGUICaches.Add(new Vector3(location.x - 1 + GUIOutlineThickness, location.y - 1 + GUIOutlineThickness, 0f));
+				areaOutlineGUICaches.Add(new Vector3(location.x - 1 + GUIOutlineThickness, location.y + 1 - GUIOutlineThickness, 0f));
 				//right
 				areaOutlineGUICaches.Add(new Vector3(location.x + 1, location.y - 1, 0f));
 				areaOutlineGUICaches.Add(new Vector3(location.x + 1, location.y + 1, 0f));
-				areaOutlineGUICaches.Add(new Vector3(location.x + 1 - GUIOutlineThickness, location.y - 1 + GUIOutlineThickness, 0f));
 				areaOutlineGUICaches.Add(new Vector3(location.x + 1 - GUIOutlineThickness, location.y + 1 - GUIOutlineThickness, 0f));
+				areaOutlineGUICaches.Add(new Vector3(location.x + 1 - GUIOutlineThickness, location.y - 1 + GUIOutlineThickness, 0f));
 				//up
 				areaOutlineGUICaches.Add(new Vector3(location.x - 1, location.y + 1, 0f));
 				areaOutlineGUICaches.Add(new Vector3(location.x + 1, location.y + 1, 0f));
-				areaOutlineGUICaches.Add(new Vector3(location.x - 1 + GUIOutlineThickness, location.y + 1 - GUIOutlineThickness, 0f));
 				areaOutlineGUICaches.Add(new Vector3(location.x + 1 - GUIOutlineThickness, location.y + 1 - GUIOutlineThickness, 0f));
+				areaOutlineGUICaches.Add(new Vector3(location.x - 1 + GUIOutlineThickness, location.y + 1 - GUIOutlineThickness, 0f));
 				//down
 				areaOutlineGUICaches.Add(new Vector3(location.x - 1, location.y - 1, 0f));
 				areaOutlineGUICaches.Add(new Vector3(location.x + 1, location.y - 1, 0f));
-				areaOutlineGUICaches.Add(new Vector3(location.x - 1 + GUIOutlineThickness, location.y - 1 + GUIOutlineThickness, 0f));
 				areaOutlineGUICaches.Add(new Vector3(location.x + 1 - GUIOutlineThickness, location.y - 1 + GUIOutlineThickness, 0f));
+				areaOutlineGUICaches.Add(new Vector3(location.x - 1 + GUIOutlineThickness, location.y - 1 + GUIOutlineThickness, 0f));
 				#endregion
-				_AreaOutlineGUICaches.Add(areaOutlineGUICaches);
+				TemplateAreaEditorCache templateAreaEditorCache = new TemplateAreaEditorCache(areaCellLocationsCache, areaEntryLocationsCache, areaOutlineGUICaches);
+				_AreaEditorCaches.Add(templateAreaEditorCache);
+				foreach (Int2 cell in areaCellLocationsCache) {
+					AddLocationToOverlapCache(cell);
+				}
 			}
 			else {
 				_UniqueIDs.Add(uniqueID);
@@ -115,8 +122,9 @@ namespace EIJ.BattleMap {
 				List<Int2> entryLocationsCache = new List<Int2>();
 				List<Vector3> areaOutlineGUICaches = new List<Vector3>();
 				int numCell = battleMapArea.CellHolderLocations.Count;
-				Int2[] fourDir = new Int2[4]; //left, right, up, down
+				Int2[] eightDir = new Int2[8]; //left, right, up, down //up-right, down-right, up-left, down-left
 				bool outlineLeft, outlineRight, outlineUp, outlineDown;
+				bool cellUpRight, cellDownRight, cellUpLeft, cellDownLeft;
 				for (int i = 0; i < numCell; i++) {
 					Int2 cell = battleMapArea.CellHolderLocations[i];
 					Int2 loc = (cell + location);
@@ -141,20 +149,30 @@ namespace EIJ.BattleMap {
 					/////////////////////////
 					#region [ GUI Outline ]
 					if (battleMapArea.VariantCellHolderTypes[i] == VariantCellHolderType.Wall) {
-						fourDir[0] = new Int2(cell.x - 1, cell.y);
-						fourDir[1] = new Int2(cell.x + 1, cell.y);
-						fourDir[2] = new Int2(cell.x, cell.y + 1);
-						fourDir[3] = new Int2(cell.x, cell.y - 1);
-						outlineLeft = !battleMapArea.CellHolderLocations.Contains(fourDir[0]);
-						outlineRight = !battleMapArea.CellHolderLocations.Contains(fourDir[1]);
-						outlineUp = !battleMapArea.CellHolderLocations.Contains(fourDir[2]);
-						outlineDown = !battleMapArea.CellHolderLocations.Contains(fourDir[3]);
+						eightDir[0] = new Int2(cell.x - 1, cell.y);
+						eightDir[1] = new Int2(cell.x + 1, cell.y);
+						eightDir[2] = new Int2(cell.x, cell.y + 1);
+						eightDir[3] = new Int2(cell.x, cell.y - 1);
+						eightDir[4] = new Int2(cell.x + 1, cell.y + 1);
+						eightDir[5] = new Int2(cell.x + 1, cell.y - 1);
+						eightDir[6] = new Int2(cell.x - 1, cell.y + 1);
+						eightDir[7] = new Int2(cell.x - 1, cell.y - 1);
+						outlineLeft = !battleMapArea.CellHolderLocations.Contains(eightDir[0]);
+						outlineRight = !battleMapArea.CellHolderLocations.Contains(eightDir[1]);
+						outlineUp = !battleMapArea.CellHolderLocations.Contains(eightDir[2]);
+						outlineDown = !battleMapArea.CellHolderLocations.Contains(eightDir[3]);
+						cellUpRight = battleMapArea.CellHolderLocations.Contains(eightDir[4]);
+						cellDownRight = battleMapArea.CellHolderLocations.Contains(eightDir[5]);
+						cellUpLeft = battleMapArea.CellHolderLocations.Contains(eightDir[6]);
+						cellDownLeft = battleMapArea.CellHolderLocations.Contains(eightDir[7]);
 						if (outlineLeft) {
 							Vector3[] quad = new Vector3[] {
-								new Vector3(loc.x, loc.y, 0f),
-								new Vector3(loc.x, loc.y + 1, 0f),
-								new Vector3(loc.x + GUIOutlineThickness, outlineDown ? loc.y + GUIOutlineThickness : loc.y, 0f),
-								new Vector3(loc.x + GUIOutlineThickness, outlineUp ? loc.y + 1 - GUIOutlineThickness: loc.y + 1, 0f)
+								new Vector3(loc.x, loc.y),
+								new Vector3(loc.x, loc.y + 1),
+								new Vector3(loc.x + GUIOutlineThickness,
+									outlineUp ? loc.y + 1 - GUIOutlineThickness : (cellUpLeft ? loc.y + 1 + GUIOutlineThickness : loc.y + 1)),
+								new Vector3(loc.x + GUIOutlineThickness,
+									outlineDown ? loc.y + GUIOutlineThickness : (cellDownLeft ? loc.y - GUIOutlineThickness : loc.y)),
 							};
 							foreach (Vector3 vertex in quad) {
 								areaOutlineGUICaches.Add(vertex);
@@ -162,10 +180,12 @@ namespace EIJ.BattleMap {
 						}
 						if (outlineRight) {
 							Vector3[] quad = new Vector3[] {
-								new Vector3(loc.x + 1, loc.y + 1, 0f),
-								new Vector3(loc.x + 1, loc.y, 0f),
-								new Vector3(loc.x + 1 - GUIOutlineThickness, outlineUp ? loc.y + 1 - GUIOutlineThickness : loc.y + 1, 0f),
-								new Vector3(loc.x + 1 - GUIOutlineThickness, outlineDown ? loc.y + GUIOutlineThickness: loc.y, 0f)
+								new Vector3(loc.x + 1, loc.y + 1),
+								new Vector3(loc.x + 1, loc.y),
+								new Vector3(loc.x + 1 - GUIOutlineThickness,
+									outlineDown ? loc.y + GUIOutlineThickness : (cellDownRight ? loc.y - GUIOutlineThickness : loc.y)),
+								new Vector3(loc.x + 1 - GUIOutlineThickness,
+									outlineUp ? loc.y + 1 - GUIOutlineThickness : (cellUpRight ? loc.y + 1 + GUIOutlineThickness : loc.y + 1)),
 							};
 							foreach (Vector3 vertex in quad) {
 								areaOutlineGUICaches.Add(vertex);
@@ -173,10 +193,12 @@ namespace EIJ.BattleMap {
 						}
 						if (outlineUp) {
 							Vector3[] quad = new Vector3[] {
-								new Vector3(loc.x, loc.y + 1, 0f),
-								new Vector3(loc.x + 1, loc.y + 1, 0f),
-								new Vector3(outlineLeft ? loc.x + GUIOutlineThickness : loc.x, loc.y + 1 - GUIOutlineThickness),
-								new Vector3(outlineRight ? loc.x + 1 - GUIOutlineThickness : loc.x + 1, loc.y + 1 - GUIOutlineThickness),
+								new Vector3(loc.x, loc.y + 1),
+								new Vector3(loc.x + 1, loc.y + 1),
+								new Vector3(outlineRight ? loc.x + 1 - GUIOutlineThickness : (cellUpRight ? loc.x + 1 + GUIOutlineThickness : loc.x + 1),
+									loc.y + 1 - GUIOutlineThickness),
+								new Vector3(outlineLeft ? loc.x + GUIOutlineThickness : (cellUpLeft ? loc.x - GUIOutlineThickness : loc.x),
+									loc.y + 1 - GUIOutlineThickness),
 							};
 							foreach (Vector3 vertex in quad) {
 								areaOutlineGUICaches.Add(vertex);
@@ -184,10 +206,12 @@ namespace EIJ.BattleMap {
 						}
 						if (outlineDown) {
 							Vector3[] quad = new Vector3[] {
-								new Vector3(loc.x + 1, loc.y + 1, 0f),
-								new Vector3(loc.x, loc.y + 1, 0f),
-								new Vector3(outlineRight ? loc.x + 1 - GUIOutlineThickness : loc.x + 1, loc.y + GUIOutlineThickness),
-								new Vector3(outlineLeft ? loc.x + GUIOutlineThickness : loc.x, loc.y + GUIOutlineThickness),
+								new Vector3(loc.x, loc.y),
+								new Vector3(loc.x + 1, loc.y),
+								new Vector3(outlineRight ? loc.x + 1 - GUIOutlineThickness : (cellDownRight ? loc.x + 1 + GUIOutlineThickness : loc.x + 1),
+									loc.y + GUIOutlineThickness),
+								new Vector3(outlineLeft ? loc.x + GUIOutlineThickness : (cellDownLeft ? loc.x - GUIOutlineThickness : loc.x),
+									loc.y + GUIOutlineThickness),
 							};
 							foreach (Vector3 vertex in quad) {
 								areaOutlineGUICaches.Add(vertex);
@@ -196,12 +220,27 @@ namespace EIJ.BattleMap {
 						#endregion
 					}
 				}
-				_AreaCellLocationsCaches.Add(cellLocationsCache);
-				_AreaEntryLocationsCaches.Add(entryLocationsCache);
-				_AreaOutlineGUICaches.Add(areaOutlineGUICaches);
+				TemplateAreaEditorCache templateAreaEditorCache = new TemplateAreaEditorCache(cellLocationsCache, entryLocationsCache, areaOutlineGUICaches);
+				_AreaEditorCaches.Add(templateAreaEditorCache);
 				_AreaBounds.Add(new Int4(boundsMin.x, boundsMin.y, boundsMax.x - boundsMin.x + 1, boundsMax.y - boundsMin.y + 1));
+				foreach (Int2 cell in cellLocationsCache) {
+					AddLocationToOverlapCache(cell);
+				}
 			}
 		}
+		void AddLocationToOverlapCache(Int2 location) {
+			if (location.x < 0 || location.x > 99 || location.y < 0 || location.y > 99) {
+				return;
+			}
+			_OverlapCache[location.x + location.y * 100]++;
+		}
+		void RemoveLocationFromOverlapCache(Int2 location) {
+			if (location.x < 0 || location.x > 99 || location.y < 0 || location.y > 99) {
+				return;
+			}
+			_OverlapCache[location.x + location.y * 100]--;
+		}
 #endif
+		#endregion
 	}
 }

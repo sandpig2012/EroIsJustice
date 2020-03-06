@@ -42,7 +42,14 @@ namespace EIJ.BattleMap {
 			Undo.undoRedoPerformed -= Repaint;
 		}
 		private void OnGUI() {
-			if (FileOpened) TargetSerializedObject.Update();
+			if (FileOpened) {
+				if (Opened == null) {
+					CloseFile();
+				}
+				else {
+					TargetSerializedObject.Update();
+				}
+			}
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.BeginVertical();
 			EditorGUILayout.BeginHorizontal();
@@ -207,16 +214,22 @@ namespace EIJ.BattleMap {
 		///////////////////////////
 		#region [ File Function ]
 		static void OpenFile(BattleMapArea file) {
-			if (file == null) return;
+			if (file == null) {
+				return;
+			}
 			Opened = file;
 			TargetSerializedObject = new SerializedObject(file);
-			if (TargetSerializedObject != null) FileOpened = true;
+			if (TargetSerializedObject != null) {
+				FileOpened = true;
+			}
 			ResetTools();
+			EditorUtility.SetDirty(Opened);
 			GUI.changed = true;
 		}
 		static void CloseFile() {
 			if (Opened != null) {
 				Opened.SetEditing(-1);
+				EditorUtility.SetDirty(Opened);
 				Undo.ClearUndo(Opened);
 			}
 			Opened = null;
@@ -357,7 +370,9 @@ namespace EIJ.BattleMap {
 		///////////////////////////
 		#region [ Tool Function ]
 		void EditPaint(Vector2 canvasPosition, Action action) {
-			if (!FileOpened) return;
+			if (!FileOpened) {
+				return;
+			}
 			Int2 location = new Int2(Mathf.FloorToInt(canvasPosition.x), Mathf.FloorToInt(canvasPosition.y));
 			if (Opened.ProcessTemplate) {
 				if (action == Action.Painting) {
@@ -463,7 +478,6 @@ namespace EIJ.BattleMap {
 								Opened.ReeditTemplate();
 								ResetTools();
 								Focus();
-
 							}
 						}
 					}
