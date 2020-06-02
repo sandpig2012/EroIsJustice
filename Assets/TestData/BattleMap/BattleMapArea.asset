@@ -13,11 +13,100 @@ MonoBehaviour:
   m_Name: BattleMapArea
   m_EditorClassIdentifier: 
   _Type: 0
-  _Entries: []
+  _Entries:
+  - x: 0
+    y: 3
+  - x: 2
+    y: -1
+  - x: -3
+    y: -3
   _Variants:
-  - _Paths: []
-    _PathCells: []
-    _PlatformCells: []
+  - _Paths:
+    - _PathLocations:
+      - x: 0
+        y: 3
+      - x: 0
+        y: 2
+      - x: 0
+        y: 1
+      - x: 0
+        y: 0
+      - x: 1
+        y: 0
+      - x: 1
+        y: -1
+      - x: 2
+        y: -1
+    - _PathLocations:
+      - x: 0
+        y: 3
+      - x: 0
+        y: 2
+      - x: 0
+        y: 1
+      - x: 0
+        y: 0
+      - x: -1
+        y: 0
+      - x: -2
+        y: 0
+      - x: -3
+        y: 0
+      - x: -3
+        y: -1
+      - x: -3
+        y: -2
+      - x: -3
+        y: -3
+    - _PathLocations:
+      - x: 2
+        y: -1
+      - x: 1
+        y: -1
+      - x: 1
+        y: 0
+      - x: 0
+        y: 0
+      - x: -1
+        y: 0
+      - x: -2
+        y: 0
+      - x: -3
+        y: 0
+      - x: -3
+        y: -1
+      - x: -3
+        y: -2
+      - x: -3
+        y: -3
+    _PathCells:
+    - x: 0
+      y: 2
+    - x: 0
+      y: 1
+    - x: 0
+      y: 0
+    - x: -1
+      y: 0
+    - x: -2
+      y: 0
+    - x: -3
+      y: 0
+    - x: -3
+      y: -1
+    - x: 1
+      y: 0
+    - x: 1
+      y: -1
+    - x: -3
+      y: -2
+    _PlatformCells:
+    - x: -1
+      y: 2
+    - x: -1
+      y: -2
+    - x: -1
+      y: -1
     _CellLocations:
     - x: 0
       y: 2
@@ -47,10 +136,95 @@ MonoBehaviour:
       y: -2
     _CellTypes: 01000000010000000100000001000000010000000100000001000000010000000100000002000000020000000200000001000000
     _AppearRate: 1
-    _Compiled: 0
-  - _Paths: []
-    _PathCells: []
-    _PlatformCells: []
+    _Compiled: 1
+  - _Paths:
+    - _PathLocations:
+      - x: 0
+        y: 3
+      - x: 0
+        y: 2
+      - x: 0
+        y: 1
+      - x: 0
+        y: 0
+      - x: 0
+        y: -1
+      - x: 1
+        y: -1
+      - x: 2
+        y: -1
+    - _PathLocations:
+      - x: 0
+        y: 3
+      - x: 0
+        y: 2
+      - x: 0
+        y: 1
+      - x: 0
+        y: 0
+      - x: -1
+        y: 0
+      - x: -2
+        y: 0
+      - x: -3
+        y: 0
+      - x: -3
+        y: -1
+      - x: -3
+        y: -2
+      - x: -3
+        y: -3
+    - _PathLocations:
+      - x: 2
+        y: -1
+      - x: 1
+        y: -1
+      - x: 0
+        y: -1
+      - x: 0
+        y: 0
+      - x: -1
+        y: 0
+      - x: -2
+        y: 0
+      - x: -3
+        y: 0
+      - x: -3
+        y: -1
+      - x: -3
+        y: -2
+      - x: -3
+        y: -3
+    _PathCells:
+    - x: 0
+      y: 2
+    - x: 0
+      y: 1
+    - x: 0
+      y: 0
+    - x: -1
+      y: 0
+    - x: -2
+      y: 0
+    - x: -3
+      y: 0
+    - x: -3
+      y: -1
+    - x: 1
+      y: -1
+    - x: 0
+      y: -1
+    - x: -3
+      y: -2
+    _PlatformCells:
+    - x: -1
+      y: 1
+    - x: -1
+      y: 2
+    - x: -1
+      y: -2
+    - x: -1
+      y: -1
     _CellLocations:
     - x: 0
       y: 2
@@ -82,9 +256,98 @@ MonoBehaviour:
       y: -2
     _CellTypes: 0100000001000000010000000100000001000000010000000100000001000000020000000200000002000000020000000100000001000000
     _AppearRate: 1
-    _Compiled: 0
-  - _Paths: []
-    _PathCells: []
+    _Compiled: 1
+  - _Paths:
+    - _PathLocations:
+      - x: 0
+        y: 3
+      - x: 0
+        y: 2
+      - x: -1
+        y: 2
+      - x: -2
+        y: 2
+      - x: -2
+        y: 1
+      - x: -2
+        y: 0
+      - x: -1
+        y: 0
+      - x: 0
+        y: 0
+      - x: 1
+        y: 0
+      - x: 1
+        y: -1
+      - x: 2
+        y: -1
+    - _PathLocations:
+      - x: 0
+        y: 3
+      - x: 0
+        y: 2
+      - x: -1
+        y: 2
+      - x: -2
+        y: 2
+      - x: -2
+        y: 1
+      - x: -2
+        y: 0
+      - x: -2
+        y: -1
+      - x: -3
+        y: -1
+      - x: -3
+        y: -2
+      - x: -3
+        y: -3
+    - _PathLocations:
+      - x: 2
+        y: -1
+      - x: 1
+        y: -1
+      - x: 1
+        y: 0
+      - x: 0
+        y: 0
+      - x: -1
+        y: 0
+      - x: -2
+        y: 0
+      - x: -2
+        y: -1
+      - x: -3
+        y: -1
+      - x: -3
+        y: -2
+      - x: -3
+        y: -3
+    _PathCells:
+    - x: 0
+      y: 2
+    - x: -1
+      y: 2
+    - x: -2
+      y: 2
+    - x: -2
+      y: 1
+    - x: -2
+      y: 0
+    - x: -1
+      y: 0
+    - x: 0
+      y: 0
+    - x: 1
+      y: 0
+    - x: 1
+      y: -1
+    - x: -2
+      y: -1
+    - x: -3
+      y: -2
+    - x: -3
+      y: -1
     _PlatformCells: []
     _CellLocations:
     - x: 0
@@ -113,10 +376,121 @@ MonoBehaviour:
       y: -1
     _CellTypes: 010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
     _AppearRate: 0.1
-    _Compiled: 0
-  - _Paths: []
-    _PathCells: []
-    _PlatformCells: []
+    _Compiled: 1
+  - _Paths:
+    - _PathLocations:
+      - x: 0
+        y: 3
+      - x: 0
+        y: 2
+      - x: -1
+        y: 2
+      - x: -2
+        y: 2
+      - x: -2
+        y: 1
+      - x: -2
+        y: 0
+      - x: -1
+        y: 0
+      - x: 0
+        y: 0
+      - x: 1
+        y: 0
+      - x: 1
+        y: -1
+      - x: 2
+        y: -1
+    - _PathLocations:
+      - x: 0
+        y: 3
+      - x: 0
+        y: 2
+      - x: -1
+        y: 2
+      - x: -2
+        y: 2
+      - x: -2
+        y: 1
+      - x: -2
+        y: 0
+      - x: -2
+        y: -1
+      - x: -2
+        y: -2
+      - x: -3
+        y: -2
+      - x: -3
+        y: -3
+    - _PathLocations:
+      - x: 2
+        y: -1
+      - x: 1
+        y: -1
+      - x: 1
+        y: 0
+      - x: 0
+        y: 0
+      - x: -1
+        y: 0
+      - x: -2
+        y: 0
+      - x: -2
+        y: -1
+      - x: -2
+        y: -2
+      - x: -3
+        y: -2
+      - x: -3
+        y: -3
+    _PathCells:
+    - x: 0
+      y: 2
+    - x: -1
+      y: 2
+    - x: -2
+      y: 2
+    - x: -2
+      y: 1
+    - x: -2
+      y: 0
+    - x: -1
+      y: 0
+    - x: 0
+      y: 0
+    - x: 1
+      y: 0
+    - x: 1
+      y: -1
+    - x: -2
+      y: -1
+    - x: -2
+      y: -2
+    - x: -3
+      y: -2
+    _PlatformCells:
+    - x: -1
+      y: 1
+    - x: -1
+      y: -1
+    - x: 0
+      y: -1
+    - x: -3
+      y: 1
+    - x: -3
+      y: 0
+    - x: -3
+      y: -1
+    - x: 0
+      y: 1
+    - x: 1
+      y: 2
+    - x: 1
+      y: 1
+    - x: 2
+      y: 1
+    - x: 2
+      y: 0
     _CellLocations:
     - x: 0
       y: 2
@@ -166,10 +540,14 @@ MonoBehaviour:
       y: -2
     _CellTypes: 0100000001000000010000000100000001000000010000000100000001000000010000000100000001000000020000000200000002000000020000000200000002000000020000000200000002000000020000000200000001000000
     _AppearRate: 22
-    _Compiled: 0
-  _RateSplits: []
-  _UniqueID: 
-  _Step: 1
+    _Compiled: 1
+  _RateSplits:
+  - 0.041493773
+  - 0.08298755
+  - 0.087136924
+  - 1.1
+  _UniqueID: t4n2tg3ao6nuh6l9rv3c
+  _Step: 8
   _HolderLocations:
   - x: -3
     y: 3

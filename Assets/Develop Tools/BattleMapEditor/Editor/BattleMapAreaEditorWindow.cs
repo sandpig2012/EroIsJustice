@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEditor;
 using UnityEditor.Callbacks;
+using UnityEngine.SceneManagement;
 
 namespace EIJ.BattleMap {
 	/// <summary>
@@ -26,7 +27,6 @@ namespace EIJ.BattleMap {
 			GUIMaterial = new Material(GUIShader);
 
 			Undo.undoRedoPerformed += Repaint;
-
 			////////////////////////////
 			////    Get Prop ID    ////
 			//////////////////////////
@@ -42,7 +42,22 @@ namespace EIJ.BattleMap {
 			Undo.undoRedoPerformed -= Repaint;
 		}
 		private void OnGUI() {
-			if (DataOpened) TargetSerializedObject.Update();
+			if (FileOpened) {
+				if (Opened == null) {
+					CloseFile();
+				}
+				else {
+					TargetSerializedObject.Update();
+				}
+			}
+			if (GUIMaterial == null) {
+				Shader GUIShader = Shader.Find("Hidden/EditorGUI/BattleMapEditorShader");
+				if (GUIShader == null) {
+					EditorUtility.DisplayDialog("Error", "BattleMapArea Editor: GUIShader not Found!", "OK");
+					Close();
+				}
+				GUIMaterial = new Material(GUIShader);
+			}
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.BeginVertical();
 			EditorGUILayout.BeginHorizontal();
@@ -53,7 +68,7 @@ namespace EIJ.BattleMap {
 			EditorGUILayout.ObjectField(Opened, typeof(BattleMapArea), false);
 			EditorGUI.EndDisabledGroup();
 			GuiLine();
-			if (DataOpened) {
+			if (FileOpened) {
 				EditorGUILayout.BeginHorizontal();
 				EditorGUILayout.LabelField("类型:", EditorStyles.boldLabel, GUILayout.Width(50));
 				if (Opened.ProcessTemplate) {
@@ -80,11 +95,11 @@ namespace EIJ.BattleMap {
 				GUILayout.Height(position.height) });
 			SetCursor(mapWindowRect);
 			DrawMapWindow(mapWindowRect);
-			if (!DataOpened) {
+			if (!FileOpened) {
 				DrawNoFileOpenText(mapWindowRect);
 			}
 			EditorGUILayout.EndHorizontal();
-			if (DataOpened) {
+			if (FileOpened) {
 				TargetSerializedObject.ApplyModifiedProperties();
 			}
 		}
@@ -114,8 +129,8 @@ namespace EIJ.BattleMap {
 				new Color32(30, 230, 30, 255),
 				new Color32(200, 30, 30, 255)};
 			public static Color[] OutlineColors = new Color[]{
-				new Color32(170, 15, 0, 255),
-				new Color32(0, 170, 10, 255)};
+				new Color32(140, 15, 0, 255),
+				new Color32(100, 170, 50, 255)};
 
 			public static GUIStyle DefaultButtonStyle = new GUIStyle(GUI.skin.button);
 			public static GUIStyle CurrentToolButtonStyle = GetCurrentToolButtonStyle();
@@ -140,7 +155,7 @@ namespace EIJ.BattleMap {
 		static GUIStyle GetCurrentToolButtonStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.button) { };
 			style.fontStyle = FontStyle.Bold;
-			Color textColor = new Color32(30, 30, 250, 255);
+			Color textColor = new Color32(120, 230, 255, 255);
 			style.normal.textColor = textColor;
 			style.hover.textColor = textColor;
 			style.active.textColor = textColor;
@@ -150,28 +165,28 @@ namespace EIJ.BattleMap {
 			GUIStyle style = new GUIStyle(GUI.skin.label) { fixedHeight = 20 };
 			style.fontStyle = FontStyle.Bold;
 			style.fontSize = 15;
-			Color textColor = new Color32(150, 30, 250, 255);
+			Color textColor = new Color32(180, 80, 255, 255);
 			style.normal.textColor = textColor;
 			return style;
 		}
 		static GUIStyle GetTypeLabelStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.label) { fixedHeight = 20 };
 			style.fontStyle = FontStyle.Bold;
-			Color textColor = new Color32(0, 100, 0, 255);
+			Color textColor = new Color32(120, 255, 150, 255);
 			style.normal.textColor = textColor;
 			return style;
 		}
 		static GUIStyle GetCurrentVariantStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.label) { };
 			style.fontStyle = FontStyle.Bold;
-			Color textColor = new Color32(20, 140, 20, 255);
+			Color textColor = new Color32(140, 255, 140, 255);
 			style.normal.textColor = textColor;
 			return style;
 		}
 		static GUIStyle GetDetachButtonStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.button) { };
 			style.fontStyle = FontStyle.Bold;
-			Color textColor = new Color32(20, 140, 20, 255);
+			Color textColor = new Color32(140, 255, 140, 255);
 			style.normal.textColor = textColor;
 			style.hover.textColor = textColor;
 			style.active.textColor = textColor;
@@ -180,13 +195,13 @@ namespace EIJ.BattleMap {
 		static GUIStyle GetCompiledVariantStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.label) { };
 			style.fontStyle = FontStyle.Bold;
-			Color textColor = new Color32(20, 20, 255, 255);
+			Color textColor = new Color32(120, 180, 255, 255);
 			style.normal.textColor = textColor;
 			return style;
 		}
 		static GUIStyle GetViewButtonStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.button) { };
-			Color textColor = new Color32(20, 20, 255, 255);
+			Color textColor = new Color32(255, 255, 100, 255);
 			style.normal.textColor = textColor;
 			style.hover.textColor = textColor;
 			style.active.textColor = textColor;
@@ -207,21 +222,27 @@ namespace EIJ.BattleMap {
 		///////////////////////////
 		#region [ File Function ]
 		static void OpenFile(BattleMapArea file) {
-			if (file == null) return;
+			if (file == null) {
+				return;
+			}
 			Opened = file;
 			TargetSerializedObject = new SerializedObject(file);
-			if (TargetSerializedObject != null) DataOpened = true;
+			if (TargetSerializedObject != null) {
+				FileOpened = true;
+			}
 			ResetTools();
+			EditorUtility.SetDirty(Opened);
 			GUI.changed = true;
 		}
 		static void CloseFile() {
 			if (Opened != null) {
 				Opened.SetEditing(-1);
+				EditorUtility.SetDirty(Opened);
 				Undo.ClearUndo(Opened);
 			}
 			Opened = null;
 			TargetSerializedObject = null;
-			DataOpened = false;
+			FileOpened = false;
 			ResetTools();
 			GUI.changed = true;
 		}
@@ -272,7 +293,7 @@ namespace EIJ.BattleMap {
 		#region [ Object Variants ]
 		static BattleMapArea Opened = null;
 		static SerializedObject TargetSerializedObject = null;
-		static bool DataOpened = false;
+		static bool FileOpened = false;
 		#endregion
 		/////////////////////////////
 		////    Tool Variants    ///
@@ -357,7 +378,9 @@ namespace EIJ.BattleMap {
 		///////////////////////////
 		#region [ Tool Function ]
 		void EditPaint(Vector2 canvasPosition, Action action) {
-			if (!DataOpened) return;
+			if (!FileOpened) {
+				return;
+			}
 			Int2 location = new Int2(Mathf.FloorToInt(canvasPosition.x), Mathf.FloorToInt(canvasPosition.y));
 			if (Opened.ProcessTemplate) {
 				if (action == Action.Painting) {
@@ -378,8 +401,12 @@ namespace EIJ.BattleMap {
 		}
 
 		void SwitchTool() {
-			if (!DataOpened) return;
-			if (Opened.ProcessCompleted) return;
+			if (!FileOpened) {
+				return;
+			}
+			if (Opened.ProcessCompleted) {
+				return;
+			}
 			if (focusedWindow == this && CurrentAction == Action.None) {
 				Event currentEvent = Event.current;
 				switch (currentEvent.type) {
@@ -463,7 +490,6 @@ namespace EIJ.BattleMap {
 								Opened.ReeditTemplate();
 								ResetTools();
 								Focus();
-
 							}
 						}
 					}
@@ -571,7 +597,7 @@ namespace EIJ.BattleMap {
 		void DrawVariantsMenu() {
 			GuiLine();
 			EditorGUILayout.LabelField("[ 变种 ]", EditorStyles.boldLabel, GUILayout.Width(100));
-			if (DataOpened) {
+			if (FileOpened) {
 				EditorGUILayout.BeginHorizontal();
 				if (GUILayout.Button("清空", GUILayout.Width(45))) {
 					if (EditorUtility.DisplayDialog("'o'!", "将移除所有变种！", "确定", "取消")) {
@@ -595,7 +621,7 @@ namespace EIJ.BattleMap {
 		///////////////////////////////
 		#region [ Draw Variants List]
 		void DrawVariantsList() {
-			if (!DataOpened) return;
+			if (!FileOpened) return;
 			int count = Opened.Variants.Count;
 			EditorGUI.BeginDisabledGroup(!Opened.ProcessVarients);
 			if (count == 0)
@@ -846,7 +872,7 @@ namespace EIJ.BattleMap {
 			////    Draw Content    ///
 			//////////////////////////
 			#region [ Draw Content ]
-			if (DataOpened) {
+			if (FileOpened) {
 				int cellCount = 0;
 				Int2[] locations;
 				if (Opened.ProcessTemplate) {

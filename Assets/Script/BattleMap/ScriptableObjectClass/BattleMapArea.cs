@@ -620,6 +620,7 @@ namespace EIJ.BattleMap {
 			if (insides.Count <= 0) return "没有位置放置路径单元！";
 			if (_Type != BattleMapAreaType.Normal) {
 				if (entries.Count < 1) return "【基地】或【刷怪点】模板必须拥有至少一个入口！";
+				if (_Type == BattleMapAreaType.Spawn && entries.Count > 1) return "【刷怪点】模板只能拥有至多一个入口！";
 			}
 			else if (entries.Count < 2) return "【普通】模板必须拥有至少两个入口！";
 
@@ -759,7 +760,9 @@ namespace EIJ.BattleMap {
 		//////////////////////
 		#region [ Variants  ]
 		[SerializeField] List<Int2> _CellHolderLocations = new List<Int2>();
+		public List<Int2> CellHolderLocations { get { return _CellHolderLocations; } }
 		[SerializeField] List<VariantCellHolderType> _VariantCellHolderTypes = new List<VariantCellHolderType>();
+		public List<VariantCellHolderType> VariantCellHolderTypes { get { return _VariantCellHolderTypes; } }
 		[SerializeField] int _VariantEditingIndex = -1;
 		public int EditingVariant { get { return _VariantEditingIndex; } set { _VariantEditingIndex = value; } }
 		/// <summary>
