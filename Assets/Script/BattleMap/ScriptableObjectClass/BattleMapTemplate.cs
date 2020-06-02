@@ -14,11 +14,65 @@ namespace EIJ.BattleMap {
 		public List<Int2> AreaEntryLocationsCache { get { return _AreaEntryLocationsCache; } }
 		[SerializeField] private List<Vector3> _AreaOutlineGUICache = new List<Vector3>();
 		public List<Vector3> AreaOutlineGUICache { get { return _AreaOutlineGUICache; } }
-
+		/// <summary>
+		/// 新建编辑器缓存
+		/// </summary>
+		/// <param name="areaCellLocationsCache">所有单元格位置</param>
+		/// <param name="areaEntryLocationsCache">入口位置</param>
+		/// <param name="areaOutlineGUICache">轮廓线缓存</param>
 		public TemplateAreaEditorCache(List<Int2> areaCellLocationsCache, List<Int2> areaEntryLocationsCache, List<Vector3> areaOutlineGUICache) {
 			_AreaCellLocationsCache = areaCellLocationsCache;
 			_AreaEntryLocationsCache = areaEntryLocationsCache;
 			_AreaOutlineGUICache = areaOutlineGUICache;
+		}
+		/// <summary>
+		/// 应用平移
+		/// </summary>
+		/// <param name="offset">平移量</param>
+		public void UpdateByLocationOffset(Int2 offset) {
+			for (int i = 0; i < _AreaCellLocationsCache.Count; i++) {
+				_AreaCellLocationsCache[i] += offset;
+			}
+			for (int i = 0; i < _AreaEntryLocationsCache.Count; i++) {
+				_AreaEntryLocationsCache[i] += offset;
+			}
+			for (int i = 0; i < _AreaOutlineGUICache.Count; i++) {
+				_AreaOutlineGUICache[i] += new Vector3(offset.x, offset.y, 0f);
+			}
+		}
+		/// <summary>
+		/// 应用90°旋转
+		/// </summary>
+		/// <param name="center">中心点</param>
+		/// <param name="clockwise">是否为顺时针</param>
+		public void UpdateByRotation(Int2 center, bool clockwise) {
+			for (int i = 0; i < _AreaCellLocationsCache.Count; i++) {
+				_AreaCellLocationsCache[i] = RotateAround(_AreaCellLocationsCache[i], center, clockwise);
+			}
+			for (int i = 0; i < _AreaEntryLocationsCache.Count; i++) {
+				_AreaEntryLocationsCache[i] = RotateAround(_AreaEntryLocationsCache[i], center, clockwise);
+			}
+			for (int i = 0; i < _AreaOutlineGUICache.Count; i++) {
+				_AreaOutlineGUICache[i] = RotateAround(_AreaOutlineGUICache[i], center, clockwise);
+			}
+		}
+		static Int2 RotateAround(Int2 location, Int2 center, bool clockwise) {
+			Int2 offset = location - center;
+			if (clockwise) {
+				return new Int2(offset.y, -offset.x - 1) + center;
+			}
+			else {
+				return new Int2(-offset.y - 1, offset.x) + center;
+			}
+		}
+		static Vector3 RotateAround(Vector3 location, Int2 center, bool clockwise) {
+			Vector3 offset = new Vector3(location.x - center.x, location.y - center.y, 0f);
+			if (clockwise) {
+				return new Vector3(offset.y + center.x, -offset.x + center.y, 0f);
+			}
+			else {
+				return new Vector3(-offset.y + center.x, offset.x + center.y, 0f);
+			}
 		}
 	}
 #endif
@@ -51,6 +105,12 @@ namespace EIJ.BattleMap {
 		[SerializeField] private List<Int4> _AreaBounds = new List<Int4>(); //x, y, width, height
 		[SerializeField] private List<string> _UniqueIDs = new List<string>();
 		const float GUIOutlineThickness = 0.3f;
+		[SerializeField] int _Selecting = -1;
+		public int Selecting { get { return _Selecting; } set { _Selecting = value; } }
+
+		private Int2 LastSelectedLocation = Int2.Zero;
+		private List<int> LastSelectedList = new List<int>();
+
 		/// <summary>
 		/// 设置模板尺寸
 		/// </summary>
@@ -58,6 +118,10 @@ namespace EIJ.BattleMap {
 		public void SetTemplateSize(Int2 Size) {
 			_TemplateSize = Size;
 		}
+		///////////////////////////////
+		////    Import Control    ////
+		/////////////////////////////
+		#region [ Import Control ]
 		/// <summary>
 		/// 拖动添加新的模块
 		/// </summary>
@@ -67,7 +131,6 @@ namespace EIJ.BattleMap {
 			if (battleMapArea == null) {
 				return;
 			}
-			Debug.Log("Test Action: Add " + battleMapArea.name + " to [" + location.x + ", " + location.y + "]");
 			_Areas.Add(battleMapArea);
 			_AreaLocations.Add(location);
 			_AreaRotations.Add(AreaRotation._0);
@@ -240,6 +303,274 @@ namespace EIJ.BattleMap {
 			}
 			_OverlapCache[location.x + location.y * 100]--;
 		}
+		/// <summary>
+		/// 检测是否有模板更新或被删除
+		/// </summary>
+		/// <returns></returns>
+		public bool CheckAreaChanged() {
+			for (int i = 0; i < _Areas.Count; i++) {
+				if (_Areas[i] == null) {
+					return true;
+				}
+				if (_UniqueIDs[i] != _Areas[i].UniqueID) {
+					return true;
+				}
+			}
+			return false;
+		}
+		/// <summary>
+		/// 更新所有产生变化的模块
+		/// </summary>
+		public void CheckUpdateAndReimport() {
+			List<BattleMapArea> areaToReimport = new List<BattleMapArea>();
+			List<Int2> locationToReimport = new List<Int2>();
+			List<AreaRotation> rotationToReimport = new List<AreaRotation>();
+			for (int i = 0; i < _Areas.Count; i++) {
+				if (_Areas[i] == null) {
+					_Areas.RemoveAt(i);
+					foreach (Int2 cell in _AreaEditorCaches[i].AreaCellLocationsCache) {
+						RemoveLocationFromOverlapCache(cell);
+					}
+					_AreaEditorCaches.RemoveAt(i);
+					_AreaBounds.RemoveAt(i);
+					_AreaLocations.RemoveAt(i);
+					_AreaRotations.RemoveAt(i);
+					_UniqueIDs.RemoveAt(i);
+					i--;
+					continue;
+				}
+				if (_Areas[i].UniqueID != _UniqueIDs[i]) {
+					areaToReimport.Add(_Areas[i]);
+					locationToReimport.Add(_AreaLocations[i]);
+					rotationToReimport.Add(_AreaRotations[i]);
+					_Areas.RemoveAt(i);
+					foreach (Int2 cell in _AreaEditorCaches[i].AreaCellLocationsCache) {
+						RemoveLocationFromOverlapCache(cell);
+					}
+					_AreaEditorCaches.RemoveAt(i);
+					_AreaBounds.RemoveAt(i);
+					_AreaLocations.RemoveAt(i);
+					_AreaRotations.RemoveAt(i);
+					_UniqueIDs.RemoveAt(i);
+					i--;
+					continue;
+				}
+			}
+			int numReimport = areaToReimport.Count;
+			for (int i = 0; i < numReimport; i++) {
+				DragAddNewArea(areaToReimport[i], locationToReimport[i]);
+				_Selecting = _Areas.Count - 1;
+				for (int j = 0; j < (int)rotationToReimport[i]; j++) {
+					RotateSelecting(true);
+				}
+			}
+			_Selecting = -1;
+		}
+		#endregion
+		//////////////////////////////
+		////    Select Control    ///
+		////////////////////////////
+		#region [ Select Control ]
+		/// <summary>
+		/// 鼠标点下时的选择反馈
+		/// </summary>
+		/// <param name="clickPosition">点击位置</param>
+		public bool MouseDownSelect(Vector2 clickPosition) {
+			int numArea = _Areas.Count;
+			Int4 currentBounds;
+			bool repeatClick = _Selecting >= 0 && LastSelectedLocation.Contain(clickPosition);
+			if (repeatClick) {
+				return false;
+			}
+			for (int i = 0; i < numArea; i++) {
+				currentBounds = _AreaBounds[i];
+				if (currentBounds.Contain(clickPosition)) {
+					foreach (Int2 cell in _AreaEditorCaches[i].AreaCellLocationsCache) {
+						if (cell.Contain(clickPosition)) {
+							_Selecting = i;
+							LastSelectedLocation = cell;
+							LastSelectedList.Clear();
+							LastSelectedList.Add(i);
+							return true;
+						}
+					}
+				}
+			}
+			_Selecting = -1;
+			LastSelectedLocation = Int2.Zero;
+			LastSelectedList.Clear();
+			return true;
+		}
+		/// <summary>
+		/// 选择重复位置时在鼠标抬起时切换选择
+		/// </summary>
+		/// <param name="clickPosition"></param>
+		public void MouseUpSelect(Vector2 clickPosition) {
+			int numArea = _Areas.Count;
+			Int4 currentBounds;
+			bool repeatClick = _Selecting >= 0 && LastSelectedLocation.Contain(clickPosition);
+			if (!repeatClick) {
+				return;
+			}
+			for (int i = 0; i < numArea; i++) {
+				if (LastSelectedList.Contains(i)) {
+					continue;
+				}
+				currentBounds = _AreaBounds[i];
+				if (currentBounds.Contain(clickPosition)) {
+					foreach (Int2 cell in _AreaEditorCaches[i].AreaCellLocationsCache) {
+						if (cell.Contain(clickPosition)) {
+							_Selecting = i;
+							LastSelectedList.Add(i);
+							return;
+						}
+					}
+				}
+			}
+			_Selecting = LastSelectedList[0];
+			LastSelectedList.Clear();
+			LastSelectedList.Add(_Selecting);
+		}
+		/// <summary>
+		/// 右键选中模块源文件
+		/// </summary>
+		/// <param name="clickPosition">点击位置</param>
+		/// <returns></returns>
+		public BattleMapArea MouseRightClickSelect(Vector2 clickPosition) {
+			if(_Selecting >= 0) {
+				bool clickOnSelecting = false;
+				foreach(Int2 cell in _AreaEditorCaches[_Selecting].AreaCellLocationsCache) {
+					if (cell.Contain(clickPosition)) {
+						clickOnSelecting = true;
+						break;
+					}
+				}
+				if (clickOnSelecting) {
+					return _Areas[_Selecting];
+				}
+			}
+			int numArea = _Areas.Count;
+			Int4 currentBounds;
+			for (int i = 0; i < numArea; i++) {
+				currentBounds = _AreaBounds[i];
+				if (currentBounds.Contain(clickPosition)) {
+					foreach (Int2 cell in _AreaEditorCaches[i].AreaCellLocationsCache) {
+						if (cell.Contain(clickPosition)) {
+							_Selecting = i;
+							LastSelectedLocation = cell;
+							LastSelectedList.Clear();
+							LastSelectedList.Add(i);
+							return _Areas[i];
+						}
+					}
+				}
+			}
+			return null;
+		}
+		/// <summary>
+		/// 清空控制选择的变量
+		/// </summary>
+		public void CancleSelecting() {
+			_Selecting = -1;
+			LastSelectedLocation = Int2.Zero;
+			LastSelectedList.Clear();
+		}
+		#endregion
+		//////////////////////////////
+		////    Select Control    ///
+		////////////////////////////
+		#region
+		/// <summary>
+		/// 移动选中模块
+		/// </summary>
+		/// <param name="newLocation">目标位置</param>
+		public void MoveSelectingAreaTo(Int2 newLocation) {
+			if (_Selecting < 0) {
+				return;
+			}
+			if (_AreaLocations[_Selecting] == newLocation) {
+				return;
+			}
+			TemplateAreaEditorCache cache = _AreaEditorCaches[_Selecting];
+			foreach (Int2 cell in cache.AreaCellLocationsCache) {
+				RemoveLocationFromOverlapCache(cell);
+			}
+			Int4 oldBounds = _AreaBounds[_Selecting];
+			Int2 offset = newLocation - _AreaLocations[_Selecting];
+			_AreaBounds[_Selecting] = new Int4(oldBounds.x + offset.x, oldBounds.y + offset.y, oldBounds.z, oldBounds.w);
+			_AreaLocations[_Selecting] = newLocation;
+			cache.UpdateByLocationOffset(offset);
+			foreach (Int2 cell in cache.AreaCellLocationsCache) {
+				AddLocationToOverlapCache(cell);
+			}
+		}
+		/// <summary>
+		/// 旋转选中模块
+		/// </summary>
+		/// <param name="clockwise">顺时针</param>
+		public void RotateSelecting(bool clockwise) {
+			if (_Selecting < 0) {
+				return;
+			}
+			TemplateAreaEditorCache cache = _AreaEditorCaches[_Selecting];
+			foreach (Int2 cell in cache.AreaCellLocationsCache) {
+				RemoveLocationFromOverlapCache(cell);
+			}
+			Int2 location = _AreaLocations[_Selecting];
+			Int4 oldBounds = _AreaBounds[_Selecting];
+			Int2 offset = new Int2(oldBounds.x - location.x, oldBounds.y - location.y);
+			Int2 boundsPoint0 = new Int2((clockwise ? offset.y : -offset.y) + location.x, (clockwise ? -offset.x : offset.x) + location.y);
+			offset = new Int2(oldBounds.x + oldBounds.z - location.x, oldBounds.y + oldBounds.w - location.y);
+			Int2 boundsPoint1 = new Int2((clockwise ? offset.y : -offset.y) + location.x, (clockwise ? -offset.x : offset.x) + location.y);
+			_AreaBounds[_Selecting] = new Int4(
+				boundsPoint0.x <= boundsPoint1.x ? boundsPoint0.x : boundsPoint1.x,
+				boundsPoint0.y <= boundsPoint1.y ? boundsPoint0.y : boundsPoint1.y,
+				oldBounds.w, oldBounds.z);
+			cache.UpdateByRotation(location, clockwise);
+			AreaRotation currentRotation = _AreaRotations[_Selecting];
+			if (clockwise) {
+				int newRotationEnumInt = (int)currentRotation + 1;
+				if (newRotationEnumInt > 3) {
+					newRotationEnumInt = 0;
+				}
+				_AreaRotations[_Selecting] = (AreaRotation)newRotationEnumInt;
+			}
+			else {
+				int newRotationEnumInt = (int)currentRotation - 1;
+				if (newRotationEnumInt < 0) {
+					newRotationEnumInt = 3;
+				}
+				_AreaRotations[_Selecting] = (AreaRotation)newRotationEnumInt;
+			}
+			foreach (Int2 cell in cache.AreaCellLocationsCache) {
+				AddLocationToOverlapCache(cell);
+			}
+		}
+		/// <summary>
+		/// 删除模块
+		/// </summary>
+		/// <param name="index">索引</param>
+		public void DeleteSelecting() {
+			RemoveAreaAt(_Selecting);
+			_Selecting = -1;
+		}
+
+		void RemoveAreaAt(int index) {
+			if (index < 0 || index >= _Areas.Count) {
+				return;
+			}
+			TemplateAreaEditorCache cache = _AreaEditorCaches[index];
+			foreach (Int2 cell in cache.AreaCellLocationsCache) {
+				RemoveLocationFromOverlapCache(cell);
+			}
+			_Areas.RemoveAt(index);
+			_AreaEditorCaches.RemoveAt(index);
+			_AreaBounds.RemoveAt(index);
+			_UniqueIDs.RemoveAt(index);
+			_AreaLocations.RemoveAt(index);
+			_AreaRotations.RemoveAt(index);			
+		}
+		#endregion
 #endif
 		#endregion
 	}

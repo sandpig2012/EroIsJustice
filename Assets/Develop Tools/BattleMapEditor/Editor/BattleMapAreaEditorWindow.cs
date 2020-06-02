@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEditor;
 using UnityEditor.Callbacks;
+using UnityEngine.SceneManagement;
 
 namespace EIJ.BattleMap {
 	/// <summary>
@@ -26,7 +27,6 @@ namespace EIJ.BattleMap {
 			GUIMaterial = new Material(GUIShader);
 
 			Undo.undoRedoPerformed += Repaint;
-
 			////////////////////////////
 			////    Get Prop ID    ////
 			//////////////////////////
@@ -49,6 +49,14 @@ namespace EIJ.BattleMap {
 				else {
 					TargetSerializedObject.Update();
 				}
+			}
+			if (GUIMaterial == null) {
+				Shader GUIShader = Shader.Find("Hidden/EditorGUI/BattleMapEditorShader");
+				if (GUIShader == null) {
+					EditorUtility.DisplayDialog("Error", "BattleMapArea Editor: GUIShader not Found!", "OK");
+					Close();
+				}
+				GUIMaterial = new Material(GUIShader);
 			}
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.BeginVertical();
@@ -147,7 +155,7 @@ namespace EIJ.BattleMap {
 		static GUIStyle GetCurrentToolButtonStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.button) { };
 			style.fontStyle = FontStyle.Bold;
-			Color textColor = new Color32(30, 30, 250, 255);
+			Color textColor = new Color32(120, 230, 255, 255);
 			style.normal.textColor = textColor;
 			style.hover.textColor = textColor;
 			style.active.textColor = textColor;
@@ -157,28 +165,28 @@ namespace EIJ.BattleMap {
 			GUIStyle style = new GUIStyle(GUI.skin.label) { fixedHeight = 20 };
 			style.fontStyle = FontStyle.Bold;
 			style.fontSize = 15;
-			Color textColor = new Color32(150, 30, 250, 255);
+			Color textColor = new Color32(180, 80, 255, 255);
 			style.normal.textColor = textColor;
 			return style;
 		}
 		static GUIStyle GetTypeLabelStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.label) { fixedHeight = 20 };
 			style.fontStyle = FontStyle.Bold;
-			Color textColor = new Color32(0, 100, 0, 255);
+			Color textColor = new Color32(120, 255, 150, 255);
 			style.normal.textColor = textColor;
 			return style;
 		}
 		static GUIStyle GetCurrentVariantStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.label) { };
 			style.fontStyle = FontStyle.Bold;
-			Color textColor = new Color32(20, 140, 20, 255);
+			Color textColor = new Color32(140, 255, 140, 255);
 			style.normal.textColor = textColor;
 			return style;
 		}
 		static GUIStyle GetDetachButtonStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.button) { };
 			style.fontStyle = FontStyle.Bold;
-			Color textColor = new Color32(20, 140, 20, 255);
+			Color textColor = new Color32(140, 255, 140, 255);
 			style.normal.textColor = textColor;
 			style.hover.textColor = textColor;
 			style.active.textColor = textColor;
@@ -187,13 +195,13 @@ namespace EIJ.BattleMap {
 		static GUIStyle GetCompiledVariantStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.label) { };
 			style.fontStyle = FontStyle.Bold;
-			Color textColor = new Color32(20, 20, 255, 255);
+			Color textColor = new Color32(120, 180, 255, 255);
 			style.normal.textColor = textColor;
 			return style;
 		}
 		static GUIStyle GetViewButtonStyle() {
 			GUIStyle style = new GUIStyle(GUI.skin.button) { };
-			Color textColor = new Color32(20, 20, 255, 255);
+			Color textColor = new Color32(255, 255, 100, 255);
 			style.normal.textColor = textColor;
 			style.hover.textColor = textColor;
 			style.active.textColor = textColor;
@@ -393,8 +401,12 @@ namespace EIJ.BattleMap {
 		}
 
 		void SwitchTool() {
-			if (!FileOpened) return;
-			if (Opened.ProcessCompleted) return;
+			if (!FileOpened) {
+				return;
+			}
+			if (Opened.ProcessCompleted) {
+				return;
+			}
 			if (focusedWindow == this && CurrentAction == Action.None) {
 				Event currentEvent = Event.current;
 				switch (currentEvent.type) {

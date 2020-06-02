@@ -26,10 +26,10 @@ namespace EIJ.BattleMap {
 
 	public enum AreaRotation {
 		//clockwise
-		_0,
-		_90,
-		_180,
-		_270,
+		_0 = 0,
+		_90 = 1,
+		_180 = 2,
+		_270 = 3,
 	}
 
 	[Serializable]
@@ -60,6 +60,14 @@ namespace EIJ.BattleMap {
 		public override string ToString() {
 			return "[" + x + ", " + y + "]";
 		}
+		/// <summary>
+		/// 将In2当作宽和高为1的Rect判定
+		/// </summary>
+		/// <param name="position">位置</param>
+		/// <returns></returns>
+		public bool Contain(Vector2 position) {
+			return (position.x >= x && position.x <= x + 1 && position.y >= y && position.y <= y + 1);
+		}
 	}
 
 	[Serializable]
@@ -73,6 +81,14 @@ namespace EIJ.BattleMap {
 			this.y = y;
 			this.z = z;
 			this.w = w;
+		}
+		/// <summary>
+		/// 将Int4当作Rect判定。z:宽 w:高
+		/// </summary>
+		/// <param name="position">位置</param>
+		/// <returns></returns>
+		public bool Contain(Vector2 position) {
+			return (position.x >= x && position.x <= x + z && position.y >= y && position.y <= y + w);
 		}
 	}
 
