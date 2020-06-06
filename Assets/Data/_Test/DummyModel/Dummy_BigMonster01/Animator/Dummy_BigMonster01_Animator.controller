@@ -43,7 +43,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 1827226128182048838, guid: b5c7691035abae7409e238773c152bdd,
+  m_Motion: {fileID: 1827226128182048838, guid: 70c1a9a30fd35b948a1617f31a8bc026,
     type: 3}
   m_Tag: 
   m_SpeedParameter: 
@@ -78,7 +78,7 @@ AnimatorController:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Dummy_Chara01_Animator
+  m_Name: Dummy_BigMonster01_Animator
   serializedVersion: 5
   m_AnimatorParameters:
   - m_Name: TriggerMoving
@@ -135,7 +135,7 @@ AnimatorStateTransition:
   m_Mute: 0
   m_IsExit: 0
   serializedVersion: 3
-  m_TransitionDuration: 0.2
+  m_TransitionDuration: 0.3
   m_TransitionOffset: 0
   m_ExitTime: 0.75
   m_HasExitTime: 0
@@ -220,7 +220,7 @@ AnimatorStateTransition:
   m_Mute: 0
   m_IsExit: 0
   serializedVersion: 3
-  m_TransitionDuration: 0.2
+  m_TransitionDuration: 0.3
   m_TransitionOffset: 0
   m_ExitTime: 0.75
   m_HasExitTime: 0
@@ -261,7 +261,7 @@ AnimatorState:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Moving
-  m_Speed: 1.5
+  m_Speed: 1
   m_CycleOffset: 0
   m_Transitions: []
   m_StateMachineBehaviours: []
@@ -273,7 +273,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 1827226128182048838, guid: 947cd2a8f213b5f4fa76f14c68bc54bf,
+  m_Motion: {fileID: 1827226128182048838, guid: d6137b6927cb18a4da0329d861e0acdc,
     type: 3}
   m_Tag: 
   m_SpeedParameter: 
@@ -301,7 +301,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 1827226128182048838, guid: 6f66e6728d714ce498866e517d6146e6,
+  m_Motion: {fileID: 1827226128182048838, guid: a65329e329203e24c9761bea8cb19587,
     type: 3}
   m_Tag: 
   m_SpeedParameter: 
@@ -328,7 +328,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 1827226128182048838, guid: 36685d893ba8e654882fb4b65ecce78c,
+  m_Motion: {fileID: 1827226128182048838, guid: 95582b7aa2995c84d96d3b95b2384f8e,
     type: 3}
   m_Tag: 
   m_SpeedParameter: 
